@@ -18,7 +18,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "data", "lineGeometry.json");
-const OVERPASS = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
+// Several public Overpass mirrors; we try them in turn. Override with OVERPASS_URL.
+const ENDPOINTS = process.env.OVERPASS_URL
+  ? [process.env.OVERPASS_URL]
+  : [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.openstreetmap.fr/api/interpreter",
+    ];
 
 // Station coordinates [lat, lng] and the ordered stops per line (CRS codes).
 const S = {
@@ -161,16 +168,30 @@ async function fetchWays(stations) {
   const pad = 0.03;
   const bbox = [Math.min(...lats) - pad, Math.min(...lngs) - pad, Math.max(...lats) + pad, Math.max(...lngs) + pad];
   const q = `[out:json][timeout:90];way["railway"="rail"](${bbox.join(",")});out geom;`;
-  const res = await fetch(OVERPASS, {
-    method: "POST",
-    body: "data=" + encodeURIComponent(q),
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-  });
-  if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
-  const json = await res.json();
-  return (json.elements || [])
-    .filter((e) => e.type === "way" && Array.isArray(e.geometry))
-    .map((e) => e.geometry.map((g) => [g.lat, g.lon]));
+  // Overpass mirrors reject anonymous requests (HTTP 406/403), so identify
+  // ourselves and try each mirror until one answers.
+  const headers = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    Accept: "application/json",
+    "User-Agent": "3d-live-train-map/0.1 (OSM track geometry fetch)",
+  };
+  let lastErr = "";
+  for (const url of ENDPOINTS) {
+    try {
+      const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q), headers });
+      if (!res.ok) {
+        lastErr = `HTTP ${res.status} from ${new URL(url).host}`;
+        continue;
+      }
+      const json = await res.json();
+      return (json.elements || [])
+        .filter((e) => e.type === "way" && Array.isArray(e.geometry))
+        .map((e) => e.geometry.map((g) => [g.lat, g.lon]));
+    } catch (e) {
+      lastErr = `${new URL(url).host}: ${e.message}`;
+    }
+  }
+  throw new Error(lastErr || "all Overpass mirrors failed");
 }
 
 async function buildLine(stops) {
