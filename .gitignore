@@ -8,4 +8,9 @@ dist-ssr
 *.log
 .vite
 *.tsbuildinfo
-server/data/observed-berths.json
+
+# Server: downloaded Network Rail reference caches + generated dry-run output
+# (the committed samples under server/data/sample/ are kept)
+server/data/*.json
+server/data/locations.csv
+server/data/sample/output.berthCoordinates.json

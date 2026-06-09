@@ -1,0 +1,10 @@
+{
+  "BERTHDATA": [
+    { "TD": "EX", "FROMBERTH": "0000", "TOBERTH": "0001", "STANOX": "55001", "EVENT": "A", "PLATFORM": "1", "STEPTYPE": "T" },
+    { "TD": "EX", "FROMBERTH": "0001", "TOBERTH": "0010", "STANOX": "55002", "EVENT": "A", "PLATFORM": "", "STEPTYPE": "B" },
+    { "TD": "EX", "FROMBERTH": "0010", "TOBERTH": "0020", "STANOX": "55003", "EVENT": "A", "PLATFORM": "1", "STEPTYPE": "B" },
+    { "TD": "EX", "FROMBERTH": "0020", "TOBERTH": "0100", "STANOX": "55010", "EVENT": "A", "PLATFORM": "1", "STEPTYPE": "B" },
+    { "TD": "EX", "FROMBERTH": "0100", "TOBERTH": "0110", "STANOX": "55011", "EVENT": "A", "PLATFORM": "", "STEPTYPE": "B" },
+    { "TD": "EX", "FROMBERTH": "0110", "TOBERTH": "0120", "STANOX": "55012", "EVENT": "A", "PLATFORM": "", "STEPTYPE": "B" }
+  ]
+}

@@ -53,6 +53,44 @@ lists every berth seen with its last headcode. Map the ones on our routes onto
 lines in **`../src/data/berths.ts`** (`REAL_BERTHS`), giving each a `lineId` and
 a `t` (0..1 along the line). Mapped berths immediately start showing trains.
 
+## Real berth coordinates (from Network Rail open data)
+
+The berth map can be built automatically instead of hand-placed. Network Rail
+doesn't publish berth lat/longs directly, but three reference files chain to
+produce them:
+
+```
+SMART   berth (TD area + berth) → STANOX        (publicdatafeeds … type=SMART)
+CORPUS  STANOX ↔ TIPLOC ↔ CRS                   (publicdatafeeds … type=CORPUS)
+coords  STANOX / TIPLOC → easting/northing or lat/long
+```
+
+`scripts/buildBerthCoords.js` downloads SMART + CORPUS (with your NR creds),
+joins them to a coordinate table, converts OS grid refs via `shared/osgb.js`,
+and writes `../src/data/berthCoordinates.json` — which the client loads into
+`BERTH_COORDS`. Trains then render at their **real** (location-level) positions.
+
+**Try it offline first (no account):**
+
+```bash
+npm run build:coords:sample   # uses server/data/sample/*, prints resolved berths
+```
+
+**For real:**
+
+1. Provide a coordinate table at `server/data/locations.csv` with columns
+   `STANOX` and/or `TIPLOC`, plus `LAT`,`LON` **or** `EASTING`,`NORTHING`. Get it
+   from BPLAN/TPS geography (Rail Data Marketplace) or an open community dataset
+   (e.g. the openraildata "TIPLOC Eastings and Northings" list).
+2. With `NR_USERNAME`/`NR_PASSWORD` set in `.env`:
+   ```bash
+   npm run build:coords            # optionally TD_AREAS="EX,SW" to filter
+   ```
+3. Rebuild/restart the app — live TD trains now appear at real positions.
+
+> Precision is **location-level** (each berth at its reporting location);
+> signal-precise positions (e.g. from OpenStreetMap signals) are a later refinement.
+
 ## How it fits together
 
 ```
