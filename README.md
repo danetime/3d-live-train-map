@@ -7,7 +7,10 @@ all from one codebase.
 
 This is the **Phase 1 prototype**: a runnable 3D scene of Exeter St David's and
 the five lines radiating out to Barnstaple, Okehampton, Exmouth, Newton Abbot and
-Taunton, with animated **simulated** trains. Real live data is Phase 2 (see below).
+Taunton, with animated **simulated** trains. The world is dressed with the Exe &
+Teign estuaries and the sea (traced from real coordinates), drifting blocky
+clouds, distant Dartmoor/Exmoor hills and scattered low-poly trees. Real live
+data is Phase 2 (see below).
 
 ![lines](public/train.svg)
 

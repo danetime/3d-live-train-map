@@ -5,6 +5,8 @@ import { OrbitControls, Sky } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { Ground } from "./Ground";
+import { Water } from "./Water";
+import { Clouds } from "./Clouds";
 import { RailNetwork } from "./RailNetwork";
 import { Stations } from "./Stations";
 import { Trains } from "./Trains";
@@ -41,11 +43,12 @@ export function World() {
       <fog attach="fog" args={["#9ad0f0", 520, 1400]} />
 
       <Sky sunPosition={[120, 180, 80]} turbidity={4} rayleigh={1.5} />
-      <ambientLight intensity={0.7} />
-      <hemisphereLight args={["#bfe3ff", "#6aa84f", 0.5]} />
+      <ambientLight intensity={0.65} />
+      <hemisphereLight args={["#cfe9ff", "#6e9a4f", 0.55]} />
       <directionalLight
+        color="#fff3df"
         position={[120, 180, 80]}
-        intensity={1.6}
+        intensity={1.7}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-300}
@@ -53,9 +56,12 @@ export function World() {
         shadow-camera-top={300}
         shadow-camera-bottom={-300}
         shadow-camera-far={800}
+        shadow-bias={-0.0004}
       />
 
       <Ground />
+      <Water />
+      <Clouds />
       <RailNetwork />
       <Stations />
       <Trains />

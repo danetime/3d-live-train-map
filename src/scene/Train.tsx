@@ -8,41 +8,84 @@ import { lineCurve } from "../data/lineCurves";
 import { useTrainStore } from "../store/useTrainStore";
 import { trainPositions } from "../sim/trainPositions";
 
-const RIDE_HEIGHT = 1.2;
+const RIDE_HEIGHT = 0.9;
 const SYNC_INTERVAL = 0.4; // seconds between store updates for the HUD
+const CARRIAGE_Z = [-2.2, 0, 2.2];
 
-/** Three blocky carriages with a cab at the front. Faces +Z. */
+/** Three blocky carriages on bogies, with a cab nose at the front. Faces +Z. */
 function TrainBody({ color, selected }: { color: string; selected: boolean }) {
   const emissive = selected ? color : "#000000";
-  const emissiveIntensity = selected ? 0.6 : 0;
+  const emissiveIntensity = selected ? 0.65 : 0;
+  const roof = useMemo(() => new THREE.Color(color).multiplyScalar(0.72), [color]);
+
   return (
     <group>
-      {[-2.1, 0, 2.1].map((z, i) => (
-        <group key={z} position={[0, 0, z]}>
-          {/* Carriage body */}
-          <mesh castShadow>
-            <boxGeometry args={[1.3, 1.3, 1.9]} />
-            <meshStandardMaterial
-              color={color}
-              flatShading
-              emissive={emissive}
-              emissiveIntensity={emissiveIntensity}
-            />
-          </mesh>
-          {/* Window strip */}
-          <mesh position={[0, 0.25, 0]}>
-            <boxGeometry args={[1.34, 0.45, 1.4]} />
-            <meshStandardMaterial color="#cfe8ff" flatShading />
-          </mesh>
-          {/* Cab wedge on the leading carriage */}
-          {i === 2 && (
-            <mesh position={[0, 0.1, 1.05]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-              <cylinderGeometry args={[0.65, 0.65, 1.3, 4]} />
-              <meshStandardMaterial color={color} flatShading />
+      {/* Continuous dark underframe running the length of the train */}
+      <mesh position={[0, -0.02, 0]} castShadow>
+        <boxGeometry args={[1.18, 0.28, 6.7]} />
+        <meshStandardMaterial color="#2d3748" flatShading />
+      </mesh>
+
+      {CARRIAGE_Z.map((z, i) => {
+        const isFront = i === CARRIAGE_Z.length - 1;
+        return (
+          <group key={z} position={[0, 0, z]}>
+            {/* Carriage body */}
+            <mesh position={[0, 0.5, 0]} castShadow>
+              <boxGeometry args={[1.3, 1.0, isFront ? 1.7 : 1.95]} />
+              <meshStandardMaterial
+                color={color}
+                flatShading
+                emissive={emissive}
+                emissiveIntensity={emissiveIntensity}
+              />
             </mesh>
-          )}
-        </group>
-      ))}
+            {/* Roof cap */}
+            <mesh position={[0, 1.06, 0]} castShadow>
+              <boxGeometry args={[1.12, 0.18, isFront ? 1.55 : 1.8]} />
+              <meshStandardMaterial color={roof} flatShading />
+            </mesh>
+            {/* Window strip (pokes through both sides) */}
+            <mesh position={[0, 0.62, 0]}>
+              <boxGeometry args={[1.36, 0.4, isFront ? 1.2 : 1.45]} />
+              <meshStandardMaterial color="#cfe8ff" flatShading />
+            </mesh>
+            {/* Bogies */}
+            {[-0.62, 0.62].map((bz) => (
+              <mesh key={bz} position={[0, -0.18, bz]} castShadow>
+                <boxGeometry args={[1.04, 0.34, 0.5]} />
+                <meshStandardMaterial color="#1a202c" flatShading />
+              </mesh>
+            ))}
+
+            {/* Cab nose + headlights on the leading carriage */}
+            {isFront && (
+              <group>
+                <mesh position={[0, 0.42, 1.0]} castShadow>
+                  <boxGeometry args={[1.26, 0.84, 0.6]} />
+                  <meshStandardMaterial
+                    color={color}
+                    flatShading
+                    emissive={emissive}
+                    emissiveIntensity={emissiveIntensity}
+                  />
+                </mesh>
+                {/* Sloped windscreen */}
+                <mesh position={[0, 0.78, 0.92]} rotation={[-0.5, 0, 0]}>
+                  <boxGeometry args={[1.18, 0.46, 0.18]} />
+                  <meshStandardMaterial color="#1f2937" flatShading />
+                </mesh>
+                {[-0.42, 0.42].map((hx) => (
+                  <mesh key={hx} position={[hx, 0.18, 1.32]}>
+                    <boxGeometry args={[0.2, 0.2, 0.12]} />
+                    <meshStandardMaterial color="#fff6c0" emissive="#fff2a0" emissiveIntensity={1.2} />
+                  </mesh>
+                ))}
+              </group>
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }

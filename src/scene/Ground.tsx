@@ -1,9 +1,11 @@
-/** Low-poly ground: a flat-shaded grassy plane with scattered blocky trees. */
+/** Low-poly ground: grassy plane, distant hills and scattered blocky trees. */
 import { useMemo } from "react";
 import * as THREE from "three";
+import { isOverWater } from "../data/water";
 
-const GROUND_SIZE = 1400;
-const TREE_COUNT = 220;
+const GROUND_SIZE = 1600;
+const TREE_COUNT = 260;
+const HILL_COUNT = 9;
 
 /** Deterministic pseudo-random so the scenery is stable between reloads. */
 function mulberry32(seed: number) {
@@ -16,6 +18,15 @@ function mulberry32(seed: number) {
   };
 }
 
+/** Ref callback that writes precomputed matrices into an InstancedMesh. */
+function applyMatrices(matrices: THREE.Matrix4[]) {
+  return (mesh: THREE.InstancedMesh | null) => {
+    if (!mesh) return;
+    matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
+    mesh.instanceMatrix.needsUpdate = true;
+  };
+}
+
 function Trees() {
   const { trunks, leaves } = useMemo(() => {
     const rng = mulberry32(1337);
@@ -24,12 +35,15 @@ function Trees() {
     const trunkMatrices: THREE.Matrix4[] = [];
     const leafMatrices: THREE.Matrix4[] = [];
 
-    for (let i = 0; i < TREE_COUNT; i++) {
-      const x = (rng() - 0.5) * GROUND_SIZE * 0.85;
-      const z = (rng() - 0.5) * GROUND_SIZE * 0.85;
-      // Keep a clearing around the network so trees don't bury the tracks.
-      if (Math.hypot(x, z) < 60) continue;
-      const scale = 0.7 + rng() * 1.1;
+    let attempts = 0;
+    while (leafMatrices.length < TREE_COUNT && attempts < TREE_COUNT * 6) {
+      attempts++;
+      const x = (rng() - 0.5) * GROUND_SIZE * 0.8;
+      const z = (rng() - 0.5) * GROUND_SIZE * 0.8;
+      // Keep a clearing around the hub, and never plant trees on water.
+      if (Math.hypot(x, z) < 55) continue;
+      if (isOverWater(x, z)) continue;
+      const scale = 0.7 + rng() * 1.2;
 
       trunk.position.set(x, scale * 1.2, z);
       trunk.scale.set(scale, scale * 2.4, scale);
@@ -59,13 +73,36 @@ function Trees() {
   );
 }
 
-/** Ref callback that writes precomputed matrices into an InstancedMesh. */
-function applyMatrices(matrices: THREE.Matrix4[]) {
-  return (mesh: THREE.InstancedMesh | null) => {
-    if (!mesh) return;
-    matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
-    mesh.instanceMatrix.needsUpdate = true;
-  };
+/** Distant Dartmoor / Exmoor backdrop hills to the west. */
+function Hills() {
+  const hills = useMemo(() => {
+    const rng = mulberry32(7);
+    return Array.from({ length: HILL_COUNT }, () => {
+      // Spread across the western half (angles ~100°..260°).
+      const angle = Math.PI * (0.55 + rng() * 0.9);
+      const radius = 240 + rng() * 130;
+      const width = 60 + rng() * 70;
+      const height = 26 + rng() * 26;
+      return {
+        x: Math.cos(angle) * radius,
+        z: Math.sin(angle) * radius,
+        width,
+        height,
+        tint: rng(),
+      };
+    });
+  }, []);
+
+  return (
+    <group>
+      {hills.map((h, i) => (
+        <mesh key={i} position={[h.x, h.height / 2 - 1, h.z]} castShadow>
+          <coneGeometry args={[h.width, h.height, 6]} />
+          <meshStandardMaterial color={h.tint > 0.5 ? "#6f8a55" : "#7e8a63"} flatShading />
+        </mesh>
+      ))}
+    </group>
+  );
 }
 
 export function Ground() {
@@ -73,8 +110,9 @@ export function Ground() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]} receiveShadow>
         <planeGeometry args={[GROUND_SIZE, GROUND_SIZE]} />
-        <meshStandardMaterial color="#6aa84f" flatShading />
+        <meshStandardMaterial color="#74ad53" flatShading />
       </mesh>
+      <Hills />
       <Trees />
     </group>
   );
