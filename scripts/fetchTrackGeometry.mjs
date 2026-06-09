@@ -170,7 +170,7 @@ async function fetchWays(stations) {
   const lngs = stations.map((s) => s[1]);
   const pad = 0.03;
   const bbox = [Math.min(...lats) - pad, Math.min(...lngs) - pad, Math.max(...lats) + pad, Math.max(...lngs) + pad];
-  const q = `[out:json][timeout:90];way["railway"="rail"](${bbox.join(",")});out geom;`;
+  const q = `[out:json][timeout:180];way["railway"="rail"](${bbox.join(",")});out geom;`;
   // Overpass mirrors reject anonymous requests (HTTP 406/403), so identify
   // ourselves and try each mirror until one answers.
   const headers = {

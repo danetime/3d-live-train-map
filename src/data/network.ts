@@ -78,6 +78,44 @@ export const stationPos = (code: string): LatLng => {
  * points; otherwise we fall back to a straightish line through the stops.
  */
 const HAND_GEOMETRY: Record<string, LatLng[]> = {
+  // Main line beyond Newton Abbot: over Dainton bank, Totnes, the South Devon
+  // banks past South Brent/Ivybridge, then Plympton into Plymouth.
+  "newton-abbot": [
+    { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
+    { lat: 50.7160, lng: -3.5380 }, // Exeter St Thomas
+    { lat: 50.6850, lng: -3.4990 }, // Exminster, west bank of the Exe
+    { lat: 50.6280, lng: -3.4490 }, // Starcross
+    { lat: 50.6080, lng: -3.4440 }, // Dawlish Warren
+    { lat: 50.5810, lng: -3.4660 }, // Dawlish
+    { lat: 50.5470, lng: -3.4960 }, // Teignmouth
+    { lat: 50.5460, lng: -3.5430 }, // along the Teign
+    { lat: 50.5290, lng: -3.6000 }, // Newton Abbot
+    { lat: 50.5100, lng: -3.6480 }, // Dainton bank
+    { lat: 50.4660, lng: -3.6850 }, // toward Totnes
+    { lat: 50.4255, lng: -3.6888 }, // Totnes
+    { lat: 50.4260, lng: -3.7700 }, // Rattery bank
+    { lat: 50.4250, lng: -3.8330 }, // South Brent
+    { lat: 50.3917, lng: -3.9136 }, // Ivybridge
+    { lat: 50.3860, lng: -4.0200 }, // Hemerdon bank
+    { lat: 50.3860, lng: -4.0660 }, // Plympton
+    { lat: 50.3779, lng: -4.1426 }, // Plymouth
+  ],
+  // Torbay branch: south from Newton Abbot through Kingskerswell to the coast.
+  paignton: [
+    { lat: 50.7290, lng: -3.5435 }, // Exeter St David's (shared trunk)
+    { lat: 50.7160, lng: -3.5380 },
+    { lat: 50.6850, lng: -3.4990 },
+    { lat: 50.6280, lng: -3.4490 },
+    { lat: 50.6080, lng: -3.4440 },
+    { lat: 50.5810, lng: -3.4660 },
+    { lat: 50.5470, lng: -3.4960 },
+    { lat: 50.5460, lng: -3.5430 },
+    { lat: 50.5290, lng: -3.6000 }, // Newton Abbot — branch leaves here
+    { lat: 50.5030, lng: -3.5870 }, // Kingskerswell
+    { lat: 50.4719, lng: -3.5402 }, // Torre
+    { lat: 50.4540, lng: -3.5436 }, // Torquay
+    { lat: 50.4352, lng: -3.5606 }, // Paignton
+  ],
   // GWR main line up the Culm valley — the stops alone made it near-straight.
   taunton: [
     { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
@@ -109,7 +147,16 @@ const FORCE_GEOMETRY: Record<string, LatLng[]> = {
 function geometryFor(id: string, stops: string[]): LatLng[] {
   if (FORCE_GEOMETRY[id]) return FORCE_GEOMETRY[id];
   const osm = osmGeometry[id];
-  if (osm && osm.length > 1) return osm.map(([lat, lng]) => ({ lat, lng }));
+  if (osm && osm.length > 1) {
+    // Guard against stale fetched data: if the stored geometry doesn't reach
+    // this line's terminus (e.g. fetched before the line was extended), ignore
+    // it and fall back, otherwise the line silently stops short.
+    const last = osm[osm.length - 1];
+    const term = stationPos(stops[stops.length - 1]);
+    const far = Math.abs(last[0] - term.lat) + Math.abs(last[1] - term.lng) > 0.04;
+    if (!far) return osm.map(([lat, lng]) => ({ lat, lng }));
+    console.warn(`[map] lineGeometry.json for "${id}" is stale (stops short) — re-run: npm run fetch:track`);
+  }
   if (HAND_GEOMETRY[id]) return HAND_GEOMETRY[id];
   return stops.map(stationPos);
 }
