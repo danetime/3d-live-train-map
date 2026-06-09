@@ -108,14 +108,11 @@ export function Stations() {
         const height = isHub ? 3.2 : 1.7;
         return (
           <group key={station.code} position={[p.x, 0, p.z]}>
-            {/* The hub gets the detailed platform layout (StationDetail)
-                instead of a generic building. */}
-            {!isHub &&
-              (land ? (
-                <LandStation size={size} height={height} isHub={isHub} />
-              ) : (
-                <SignalStation isHub={isHub} />
-              ))}
+            {land ? (
+              <LandStation size={size} height={height} isHub={isHub} />
+            ) : (
+              <SignalStation isHub={isHub} />
+            )}
             <ScaledLabel
               text={isHub ? "Exeter St David's" : station.name}
               y={(land ? height : 2.4) + (isHub ? 2.4 : 1.6)}
