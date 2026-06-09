@@ -120,6 +120,21 @@ travel, instead of being approximated along a hand-drawn line.
 Wrap the web build with **Capacitor** to produce native iOS/Android projects
 (no rewrite), then ship via TestFlight / Play Console.
 
+## Make the track follow the real route (OpenStreetMap)
+
+By default each line is a smooth (centripetal) spline through its stations plus a
+few hand-traced bends. For pixel-accurate routes, fetch the real `railway=rail`
+geometry from OpenStreetMap — run this **on your own machine** (a cloud sandbox
+may not be allowed to reach the Overpass API):
+
+```bash
+npm run fetch:track     # writes src/data/lineGeometry.json
+```
+
+It traces the shortest path along the rails between each pair of stations. If
+`lineGeometry.json` has data for a line, the app draws that; otherwise it falls
+back to the hand-traced geometry (`HAND_GEOMETRY` in `src/data/network.ts`).
+
 ## Where the 3D / map data comes from
 
 - **OpenStreetMap (Overpass API, <https://overpass-turbo.eu>)** — `railway=rail`

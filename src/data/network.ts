@@ -10,7 +10,8 @@
  * route from the Overpass API (https://overpass-turbo.eu) and drop the
  * coordinate list in here.
  */
-import type { Line, Station } from "./types";
+import type { Line, LatLng, Station } from "./types";
+import lineGeometryJson from "./lineGeometry.json";
 
 /** Central hub. Everything is positioned relative to this. */
 export const ORIGIN = { lat: 50.7290, lng: -3.5435 }; // Exeter St David's
@@ -52,11 +53,45 @@ export const STATIONS: Station[] = [
   { code: "OKE", name: "Okehampton", pos: { lat: 50.7340, lng: -4.0000 } },
 ];
 
-const stationPos = (code: string) => {
-  const s = STATIONS.find((st) => st.code === code);
+const STATION_BY_CODE = new Map(STATIONS.map((s) => [s.code, s]));
+
+export const stationPos = (code: string): LatLng => {
+  const s = STATION_BY_CODE.get(code);
   if (!s) throw new Error(`Unknown station code: ${code}`);
   return s.pos;
 };
+
+/**
+ * Drawing geometry per line, denser than the stops so the track follows the
+ * real route's curves. Generated geometry from OpenStreetMap (lineGeometry.json,
+ * produced by scripts/fetchTrackGeometry.mjs) wins; then these hand-traced
+ * points; otherwise we fall back to a straightish line through the stops.
+ */
+const HAND_GEOMETRY: Record<string, LatLng[]> = {
+  // GWR main line up the Culm valley — the stops alone made it near-straight.
+  taunton: [
+    { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
+    { lat: 50.7430, lng: -3.5505 }, // Cowley Bridge Jn
+    { lat: 50.7570, lng: -3.5050 }, // Stoke Canon
+    { lat: 50.7900, lng: -3.4750 }, // Silverton
+    { lat: 50.8120, lng: -3.4520 }, // Hele & Bradninch
+    { lat: 50.8550, lng: -3.3920 }, // Cullompton
+    { lat: 50.9170, lng: -3.3640 }, // Tiverton Parkway
+    { lat: 50.9400, lng: -3.3250 }, // Whiteball
+    { lat: 50.9750, lng: -3.2250 }, // Wellington
+    { lat: 51.0150, lng: -3.1500 }, // Norton Fitzwarren
+    { lat: 51.0250, lng: -3.1015 }, // Taunton
+  ],
+};
+
+const osmGeometry = lineGeometryJson as Record<string, [number, number][]>;
+
+function geometryFor(id: string, stops: string[]): LatLng[] {
+  const osm = osmGeometry[id];
+  if (osm && osm.length > 1) return osm.map(([lat, lng]) => ({ lat, lng }));
+  if (HAND_GEOMETRY[id]) return HAND_GEOMETRY[id];
+  return stops.map(stationPos);
+}
 
 /** Define a line from an ordered list of CRS codes (Exeter outwards). */
 const line = (
@@ -65,7 +100,7 @@ const line = (
   destination: string,
   color: string,
   stops: string[],
-): Line => ({ id, name, destination, color, stops, points: stops.map(stationPos) });
+): Line => ({ id, name, destination, color, stops, points: geometryFor(id, stops) });
 
 export const LINES: Line[] = [
   line("exmouth", "Avocet Line", "Exmouth", "#e53e3e",

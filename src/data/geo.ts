@@ -33,5 +33,7 @@ export function project({ lat, lng }: LatLng, target?: THREE.Vector3): THREE.Vec
 /** Build a smooth Catmull-Rom curve through a list of geographic points. */
 export function curveFromPoints(points: LatLng[]): THREE.CatmullRomCurve3 {
   const pts = points.map((p) => project(p));
-  return new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.5);
+  // Centripetal parameterisation avoids the loops/overshoot a uniform spline
+  // produces between sparse or sharply-turning waypoints.
+  return new THREE.CatmullRomCurve3(pts, false, "centripetal");
 }

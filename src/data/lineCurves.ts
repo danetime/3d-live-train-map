@@ -1,26 +1,34 @@
 /** Cached spline curves per line, shared by the track renderer and the trains. */
 import * as THREE from "three";
-import { curveFromPoints } from "./geo";
-import { LINES } from "./network";
+import { curveFromPoints, project } from "./geo";
+import { LINES, stationPos } from "./network";
 
 const cache = new Map<string, THREE.CatmullRomCurve3>();
 /** Arc-length-normalised position (0..1) of each stop along its line. */
 const stopParams = new Map<string, number[]>();
+const STOP_SAMPLES = 500;
 
 for (const ln of LINES) {
   const curve = curveFromPoints(ln.points);
   cache.set(ln.id, curve);
 
-  // A non-closed Catmull-Rom curve passes through control point i at curve
-  // parameter i/(n-1); convert that to an arc-length fraction so trains can be
-  // placed between stations using the same `t` space as curve.getPointAt().
-  const divisions = 600;
-  const lengths = curve.getLengths(divisions);
-  const total = lengths[divisions] || 1;
-  const n = ln.points.length;
-  const params = ln.points.map((_, i) => {
-    const k = Math.round((i / (n - 1)) * divisions);
-    return lengths[k] / total;
+  // The drawing geometry may be denser than the stops (real-route waypoints),
+  // so locate each stop by the nearest point on the curve and record its
+  // arc-length fraction — the same `t` space curve.getPointAt() uses.
+  const sampled: THREE.Vector3[] = [];
+  for (let i = 0; i <= STOP_SAMPLES; i++) sampled.push(curve.getPointAt(i / STOP_SAMPLES));
+  const params = ln.stops.map((code) => {
+    const target = project(stationPos(code));
+    let bestT = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < sampled.length; i++) {
+      const d = sampled[i].distanceToSquared(target);
+      if (d < bestD) {
+        bestD = d;
+        bestT = i / STOP_SAMPLES;
+      }
+    }
+    return bestT;
   });
   stopParams.set(ln.id, params);
 }
