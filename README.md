@@ -83,7 +83,33 @@ plenty accurate for this stylised map). For production, deploy the included
 serverless proxy at `api/rtt/[...path].js` (Vercel-style) with the same two env
 vars.
 
-## Phase 3 — native apps (later)
+## Phase 3 — real berth-level signalling (Traksy-style) 🚦 in progress
+
+The goal is a **3D version of a signalling map** like [Traksy](https://traksy.uk)
+/ [OpenTrainTimes](https://www.opentraintimes.com/maps): trains shown as
+headcodes hopping **signal berth to signal berth**, driven by Network Rail's
+**Train Describer (TD)** feed.
+
+This needs a small always-on backend (the TD feed is a STOMP stream a browser
+can't read directly), which lives in **[`/server`](server/README.md)**:
+
+```bash
+cd server && npm install && npm start   # replay mode — demo berths, no account
+```
+
+Run that alongside `npm run dev` and trains hop berth-to-berth via the real
+pipeline. For **live** data, register (free) at
+<https://publicdatafeeds.networkrail.co.uk/>, add credentials, and run
+`npm run live` — see [`server/README.md`](server/README.md). Because there's no
+open berth→coordinate dataset, berths are hand-mapped onto lines in
+`src/data/berths.ts` (the server's `capture` mode helps you discover the IDs).
+
+The app selects its data source in `src/App.tsx`:
+`"network-rail-td"` (berth feed), `"realtime-trains"` (timetable), or `"mock"`.
+Any source falls back to the simulation if it isn't running, so the world is
+never empty.
+
+## Phase 4 — native apps (later)
 
 Wrap the web build with **Capacitor** to produce native iOS/Android projects
 (no rewrite), then ship via TestFlight / Play Console.

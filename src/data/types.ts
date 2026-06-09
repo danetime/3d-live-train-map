@@ -47,4 +47,6 @@ export type Train = {
   speed: number;
   /** Where it is heading right now, for the info panel. */
   headingTo: string;
+  /** TD berth the train currently occupies (live feed only). */
+  berth?: string;
 };

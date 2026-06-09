@@ -73,6 +73,12 @@ export function Hud() {
           <div className="panel-body">
             Heading to <strong>{selected.headingTo}</strong> ·{" "}
             {Math.round(selected.t * 100)}% along the line
+            {selected.berth && (
+              <>
+                {" "}
+                · berth <strong>{selected.berth}</strong>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -1,0 +1,16 @@
+{
+  "name": "3d-live-train-map-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Network Rail Train Describer (TD) feed → WebSocket bridge for the 3D train map.",
+  "scripts": {
+    "start": "node index.js",
+    "live": "node --env-file=.env index.js",
+    "capture": "CAPTURE=1 node --env-file=.env index.js"
+  },
+  "dependencies": {
+    "stompit": "^1.0.0",
+    "ws": "^8.18.0"
+  }
+}

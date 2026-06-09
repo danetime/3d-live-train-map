@@ -1,21 +1,24 @@
 /**
  * The single entry point for "where do trains come from".
  *
- * - "mock": the simulated trains (always works, no setup).
- * - "realtime-trains": polls the RTT API through the proxy. If it isn't
- *   configured yet (no credentials) or is unreachable, it logs a clear hint and
- *   falls back to the simulation so the world is never empty.
+ * - "mock":            simulated trains (always works, no setup).
+ * - "realtime-trains": polls the RTT timetable API via the Vite proxy.
+ * - "network-rail-td": the real berth-level feed, via the /server WebSocket
+ *                      bridge. This is the Traksy-style source.
  *
- * Every consumer reads from the store, so the source is invisible downstream.
+ * Any source that isn't configured/reachable falls back to the simulation once,
+ * so the world is never empty. Every consumer reads from the store, so the
+ * source is invisible downstream.
  */
 import { useEffect } from "react";
 import { useTrainStore } from "../store/useTrainStore";
 import { createMockTrains } from "./mockTrains";
 import { fetchLiveTrains } from "../services/realtimeTrains";
+import { connectTdFeed } from "../services/networkRailTd";
 
-export type FeedSource = "mock" | "realtime-trains";
+export type FeedSource = "mock" | "realtime-trains" | "network-rail-td";
 
-/** How often to re-poll the live feed. */
+/** How often to re-poll the RTT timetable feed. */
 const POLL_MS = 60_000;
 
 export function useTrainFeed(source: FeedSource = "mock") {
@@ -23,16 +26,51 @@ export function useTrainFeed(source: FeedSource = "mock") {
   const setDataSource = useTrainStore((s) => s.setDataSource);
 
   useEffect(() => {
+    let cancelled = false;
+    let warnedFallback = false;
+
+    const fallbackToSim = (message: string, err?: unknown) => {
+      if (cancelled || warnedFallback) return;
+      warnedFallback = true;
+      console.warn(`[train-map] ${message}`, err ?? "");
+      setDataSource("sim");
+      setTrains(createMockTrains());
+    };
+
+    // --- Simulated trains ---
     if (source === "mock") {
       setDataSource("sim");
       setTrains(createMockTrains());
       return;
     }
 
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout>;
-    let warnedFallback = false;
+    // --- Network Rail TD berth feed (WebSocket bridge) ---
+    if (source === "network-rail-td") {
+      let gotData = false;
+      const disconnect = connectTdFeed(
+        (trains) => {
+          if (cancelled) return;
+          gotData = true;
+          setDataSource(trains.length > 0 ? "live" : "sim");
+          if (trains.length > 0) setTrains(trains);
+        },
+        () => {
+          if (!gotData) {
+            fallbackToSim(
+              "TD backend not reachable — using simulated trains.\n" +
+                "Start it with: cd server && npm install && npm start",
+            );
+          }
+        },
+      );
+      return () => {
+        cancelled = true;
+        disconnect();
+      };
+    }
 
+    // --- Realtime Trains timetable API (polling) ---
+    let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
       try {
         const trains = await fetchLiveTrains();
@@ -40,29 +78,19 @@ export function useTrainFeed(source: FeedSource = "mock") {
         if (trains.length > 0) {
           setDataSource("live");
           setTrains(trains);
-        } else if (!warnedFallback) {
-          // Connected but nothing mapped (quiet time / window) — keep the sim.
-          warnedFallback = true;
-          setDataSource("sim");
-          setTrains(createMockTrains());
+        } else {
+          fallbackToSim("Live RTT feed returned nothing — using simulated trains.");
         }
       } catch (err) {
-        if (cancelled) return;
-        if (!warnedFallback) {
-          warnedFallback = true;
-          console.warn(
-            "[train-map] Live RTT feed unavailable — using simulated trains.\n" +
-              "Add RTT credentials (see README → Phase 2) to go live.",
-            err,
-          );
-          setDataSource("sim");
-          setTrains(createMockTrains());
-        }
+        fallbackToSim(
+          "Live RTT feed unavailable — using simulated trains.\n" +
+            "Add RTT credentials (see README → Phase 2) to go live.",
+          err,
+        );
       } finally {
         if (!cancelled) timer = setTimeout(tick, POLL_MS);
       }
     };
-
     tick();
     return () => {
       cancelled = true;
