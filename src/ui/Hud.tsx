@@ -19,7 +19,7 @@ export function Hud() {
           <span className={`badge ${live ? "live" : "sim"}`}>{live ? "LIVE" : "SIM"}</span>
         </h1>
         <p className="subtitle">
-          3D train map · {live ? "live Realtime Trains data" : "simulated data"}
+          3D train map · {live ? "live data" : "simulated data"}
         </p>
 
         <div className="legend">

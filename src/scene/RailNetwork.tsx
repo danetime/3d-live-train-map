@@ -4,20 +4,23 @@ import * as THREE from "three";
 import { LINES } from "../data/network";
 import { lineCurve } from "../data/lineCurves";
 
-const TRACK_WIDTH = 1.6;
-const TRACK_HEIGHT = 0.35;
+const TRACK_WIDTH = 0.85;
+const TRACK_HEIGHT = 0.28;
+const BASE_Y = 0.16;
+// Stack lines at slightly different heights so shared sections (e.g. Tarka and
+// Dartmoor out of Exeter) don't z-fight into a jagged mess.
+const Y_STEP = 0.07;
 
-function Track({ lineId, color }: { lineId: string; color: string }) {
+function Track({ lineId, color, index }: { lineId: string; color: string; index: number }) {
   const geometry = useMemo(() => {
     const curve = lineCurve(lineId);
-    // A flattened tube reads as a chunky, low-poly railway embankment.
-    const tube = new THREE.TubeGeometry(curve, 240, TRACK_WIDTH / 2, 4, false);
+    const tube = new THREE.TubeGeometry(curve, 320, TRACK_WIDTH / 2, 5, false);
     tube.scale(1, TRACK_HEIGHT / (TRACK_WIDTH / 2), 1);
     return tube;
   }, [lineId]);
 
   return (
-    <mesh geometry={geometry} position={[0, 0.18, 0]} castShadow receiveShadow>
+    <mesh geometry={geometry} position={[0, BASE_Y + index * Y_STEP, 0]} castShadow receiveShadow>
       <meshStandardMaterial color={color} flatShading />
     </mesh>
   );
@@ -26,8 +29,8 @@ function Track({ lineId, color }: { lineId: string; color: string }) {
 export function RailNetwork() {
   return (
     <group>
-      {LINES.map((line) => (
-        <Track key={line.id} lineId={line.id} color={line.color} />
+      {LINES.map((line, i) => (
+        <Track key={line.id} lineId={line.id} color={line.color} index={i} />
       ))}
     </group>
   );

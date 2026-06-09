@@ -13,9 +13,9 @@ type Poly = LatLng[];
 
 const SEA: Poly = [
   { lat: 50.616, lng: -3.404 }, // Exmouth seafront
-  { lat: 50.45, lng: -2.7 }, // far ESE, out to sea
-  { lat: 50.05, lng: -3.0 }, // far south
-  { lat: 50.2, lng: -3.55 }, // far SSW
+  { lat: 50.35, lng: -2.0 }, // far ESE, out past the horizon
+  { lat: 49.6, lng: -2.7 }, // far south
+  { lat: 49.9, lng: -3.9 }, // far SSW
   { lat: 50.54, lng: -3.5 }, // Teignmouth coast
   { lat: 50.578, lng: -3.462 }, // Dawlish
   { lat: 50.606, lng: -3.44 }, // Dawlish Warren
