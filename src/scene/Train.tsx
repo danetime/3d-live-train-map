@@ -1,6 +1,7 @@
 /** A single low-poly train that rides its line's spline. */
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
 import type { Train as TrainModel } from "../data/types";
 import { LINE_BY_ID } from "../data/network";
@@ -87,6 +88,29 @@ function TrainBody({ color, selected }: { color: string; selected: boolean }) {
         );
       })}
     </group>
+  );
+}
+
+/** Traksy-style headcode plate that floats above the train and faces the camera. */
+function HeadcodeLabel({ code, selected }: { code: string; selected: boolean }) {
+  const width = useMemo(() => code.length * 0.62 + 0.7, [code]);
+  return (
+    <Billboard position={[0, 2.7, 0]}>
+      <mesh>
+        <planeGeometry args={[width, 1.15]} />
+        <meshBasicMaterial color={selected ? "#143d16" : "#0c0c0c"} transparent opacity={0.88} />
+      </mesh>
+      <Text
+        position={[0, 0, 0.01]}
+        fontSize={0.82}
+        color="#3dff62"
+        anchorX="center"
+        anchorY="middle"
+        letterSpacing={0.06}
+      >
+        {code}
+      </Text>
+    </Billboard>
   );
 }
 
@@ -184,6 +208,7 @@ export function Train({ train }: { train: TrainModel }) {
       }}
     >
       <TrainBody color={line.color} selected={selected} />
+      <HeadcodeLabel code={train.headcode} selected={selected} />
     </group>
   );
 }
