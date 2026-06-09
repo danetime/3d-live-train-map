@@ -35,6 +35,16 @@ export const STATIONS: Station[] = [
   { code: "TGM", name: "Teignmouth", pos: { lat: 50.5470, lng: -3.4960 } },
   { code: "NTA", name: "Newton Abbot", pos: { lat: 50.5290, lng: -3.6000 } },
 
+  // Main line SW → Plymouth (continues beyond Newton Abbot)
+  { code: "TOT", name: "Totnes", pos: { lat: 50.4255, lng: -3.6888 } },
+  { code: "IVY", name: "Ivybridge", pos: { lat: 50.3917, lng: -3.9136 } },
+  { code: "PLY", name: "Plymouth", pos: { lat: 50.3779, lng: -4.1426 } },
+
+  // Riviera/Torbay branch → Paignton (branches at Newton Abbot)
+  { code: "TRR", name: "Torre", pos: { lat: 50.4719, lng: -3.5402 } },
+  { code: "TQY", name: "Torquay", pos: { lat: 50.4540, lng: -3.5436 } },
+  { code: "PGN", name: "Paignton", pos: { lat: 50.4352, lng: -3.5606 } },
+
   // Main line NE → Taunton
   { code: "TVP", name: "Tiverton Parkway", pos: { lat: 50.9170, lng: -3.3640 } },
   { code: "TAU", name: "Taunton", pos: { lat: 51.0250, lng: -3.1015 } },
@@ -117,8 +127,10 @@ const line = (
 export const LINES: Line[] = [
   line("exmouth", "Avocet Line", "Exmouth", "#e53e3e",
     ["EXD", "EXC", "POL", "DIG", "TOP", "EXN", "LYM", "EXM"]),
-  line("newton-abbot", "Riviera Line", "Newton Abbot", "#3182ce",
-    ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA"], { doubleTrack: true }),
+  line("newton-abbot", "Main Line", "Plymouth", "#3182ce",
+    ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA", "TOT", "IVY", "PLY"], { doubleTrack: true }),
+  line("paignton", "Riviera Line", "Paignton", "#14b8a6",
+    ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA", "TRR", "TQY", "PGN"], { drawFrom: "NTA" }),
   line("taunton", "Main Line", "Taunton", "#38a169",
     ["EXD", "TVP", "TAU"], { doubleTrack: true }),
   line("barnstaple", "Tarka Line", "Barnstaple", "#d69e2e",

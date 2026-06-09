@@ -11,6 +11,7 @@
 const LINES = [
   ["exmouth", "EXM"],
   ["newton-abbot", "NAB"],
+  ["paignton", "PAI"],
   ["taunton", "TAU"],
   ["barnstaple", "BNP"],
   ["okehampton", "OKE"],

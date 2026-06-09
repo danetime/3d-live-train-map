@@ -35,10 +35,13 @@ const S = {
   NTA: [50.529, -3.6], TVP: [50.917, -3.364], TAU: [51.025, -3.1015], NTC: [50.779, -3.587],
   CDF: [50.79, -3.648], YEO: [50.779, -3.708], EGG: [50.887, -3.878], KIG: [50.942, -3.908],
   UMB: [50.997, -3.976], BNP: [51.076, -4.064], SPC: [50.774, -3.91], OKE: [50.734, -4.0],
+  TOT: [50.4255, -3.6888], IVY: [50.3917, -3.9136], PLY: [50.3779, -4.1426],
+  TRR: [50.4719, -3.5402], TQY: [50.454, -3.5436], PGN: [50.4352, -3.5606],
 };
 const LINES = {
   exmouth: ["EXD", "EXC", "POL", "DIG", "TOP", "EXN", "LYM", "EXM"],
-  "newton-abbot": ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA"],
+  "newton-abbot": ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA", "TOT", "IVY", "PLY"],
+  paignton: ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA", "TRR", "TQY", "PGN"],
   taunton: ["EXD", "TVP", "TAU"],
   barnstaple: ["EXD", "NTC", "CDF", "YEO", "EGG", "KIG", "UMB", "BNP"],
   okehampton: ["EXD", "NTC", "CDF", "YEO", "SPC", "OKE"],

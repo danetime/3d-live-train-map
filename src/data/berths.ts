@@ -29,6 +29,7 @@ const key = (area: string, berth: string) => `${area}:${berth}`;
 const DEMO_PREFIX: Record<string, string> = {
   exmouth: "EXM",
   "newton-abbot": "NAB",
+  paignton: "PAI",
   taunton: "TAU",
   barnstaple: "BNP",
   okehampton: "OKE",

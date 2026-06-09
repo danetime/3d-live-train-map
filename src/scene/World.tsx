@@ -9,6 +9,7 @@ import { Water } from "./Water";
 import { Buildings } from "./Buildings";
 import { Clouds } from "./Clouds";
 import { RailNetwork } from "./RailNetwork";
+import { Signals } from "./Signals";
 import { Stations } from "./Stations";
 import { Trains } from "./Trains";
 import { useTrainStore } from "../store/useTrainStore";
@@ -83,6 +84,7 @@ export function World() {
         </>
       )}
       <RailNetwork />
+      <Signals />
       <Stations />
       <Trains />
 
