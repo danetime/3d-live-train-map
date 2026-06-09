@@ -13,7 +13,7 @@
  * box, builds a graph of track segments, and traces the shortest path along the
  * rails between each pair of consecutive stations — giving the real curves.
  */
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,7 +24,8 @@ const ENDPOINTS = process.env.OVERPASS_URL
   : [
       "https://overpass-api.de/api/interpreter",
       "https://overpass.kumi.systems/api/interpreter",
-      "https://overpass.openstreetmap.fr/api/interpreter",
+      "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+      "https://overpass.private.coffee/api/interpreter",
     ];
 
 // Station coordinates [lat, lng] and the ordered stops per line (CRS codes).
@@ -172,29 +173,34 @@ async function fetchWays(stations) {
   const bbox = [Math.min(...lats) - pad, Math.min(...lngs) - pad, Math.max(...lats) + pad, Math.max(...lngs) + pad];
   const q = `[out:json][timeout:180];way["railway"="rail"](${bbox.join(",")});out geom;`;
   // Overpass mirrors reject anonymous requests (HTTP 406/403), so identify
-  // ourselves and try each mirror until one answers.
+  // ourselves, try every mirror (two rounds), and report each failure.
   const headers = {
     "Content-Type": "application/x-www-form-urlencoded",
     Accept: "application/json",
-    "User-Agent": "3d-live-train-map/0.1 (OSM track geometry fetch)",
+    "User-Agent": "3d-live-train-map/0.1 (OSM track geometry fetch; hobby project)",
   };
-  let lastErr = "";
-  for (const url of ENDPOINTS) {
-    try {
-      const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q), headers });
-      if (!res.ok) {
-        lastErr = `HTTP ${res.status} from ${new URL(url).host}`;
-        continue;
+  const errors = [];
+  for (let round = 0; round < 2; round++) {
+    for (const url of ENDPOINTS) {
+      const host = new URL(url).host;
+      try {
+        const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q), headers });
+        if (!res.ok) {
+          const body = (await res.text()).replace(/\s+/g, " ").slice(0, 90);
+          errors.push(`${host}: HTTP ${res.status} ${body}`);
+          continue;
+        }
+        const json = await res.json();
+        return (json.elements || [])
+          .filter((e) => e.type === "way" && Array.isArray(e.geometry))
+          .map((e) => e.geometry.map((g) => [g.lat, g.lon]));
+      } catch (e) {
+        errors.push(`${host}: ${e.cause?.code || e.cause?.message || e.message}`);
       }
-      const json = await res.json();
-      return (json.elements || [])
-        .filter((e) => e.type === "way" && Array.isArray(e.geometry))
-        .map((e) => e.geometry.map((g) => [g.lat, g.lon]));
-    } catch (e) {
-      lastErr = `${new URL(url).host}: ${e.message}`;
     }
+    if (round === 0) await new Promise((r) => setTimeout(r, 3000));
   }
-  throw new Error(lastErr || "all Overpass mirrors failed");
+  throw new Error("all mirrors failed:\n    " + [...new Set(errors)].join("\n    "));
 }
 
 async function buildLine(stops) {
@@ -218,19 +224,29 @@ async function buildLine(stops) {
 }
 
 async function main() {
-  const out = {};
+  // Start from whatever we already have, so a failed run never wipes good data.
+  let out = {};
+  try {
+    out = JSON.parse(readFileSync(OUT, "utf8")) || {};
+  } catch {
+    /* no existing file */
+  }
+
+  let ok = 0;
   for (const [id, stops] of Object.entries(LINES)) {
     process.stdout.write(`Fetching ${id} … `);
     try {
       out[id] = await buildLine(stops);
+      ok++;
       console.log(`${out[id].length} points`);
     } catch (e) {
-      console.warn(`failed (${e.message})`);
+      const kept = out[id]?.length ? ` — kept previous ${out[id].length} points` : "";
+      console.warn(`failed${kept}\n  ${e.message}`);
     }
     await new Promise((r) => setTimeout(r, 1500)); // be polite to Overpass
   }
   writeFileSync(OUT, JSON.stringify(out) + "\n");
-  console.log(`Wrote ${OUT}`);
+  console.log(`Wrote ${OUT} (${ok}/${Object.keys(LINES).length} lines refreshed)`);
 }
 
 function selftest() {
