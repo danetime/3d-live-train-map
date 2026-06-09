@@ -22,15 +22,16 @@ const M_PER_DEG_LNG = M_PER_DEG_LAT * Math.cos((ORIGIN.lat * Math.PI) / 180);
  */
 export const WORLD_SCALE = 0.004;
 
-/** Project a lat/lng to a flat world position (Y = 0). */
-export function project({ lat, lng }: LatLng): THREE.Vector3 {
+/** Project a lat/lng to a flat world position (Y = 0), optionally into `target`. */
+export function project({ lat, lng }: LatLng, target?: THREE.Vector3): THREE.Vector3 {
   const east = (lng - ORIGIN.lng) * M_PER_DEG_LNG;
   const north = (lat - ORIGIN.lat) * M_PER_DEG_LAT;
-  return new THREE.Vector3(east * WORLD_SCALE, 0, -north * WORLD_SCALE);
+  const out = target ?? new THREE.Vector3();
+  return out.set(east * WORLD_SCALE, 0, -north * WORLD_SCALE);
 }
 
 /** Build a smooth Catmull-Rom curve through a list of geographic points. */
 export function curveFromPoints(points: LatLng[]): THREE.CatmullRomCurve3 {
-  const pts = points.map(project);
+  const pts = points.map((p) => project(p));
   return new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.5);
 }

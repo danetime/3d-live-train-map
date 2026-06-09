@@ -109,6 +109,12 @@ The app selects its data source in `src/App.tsx`:
 Any source falls back to the simulation if it isn't running, so the world is
 never empty.
 
+**Got real berth/signal coordinates?** That's the precise unlock — drop them
+into `BERTH_COORDS` in `src/data/berths.ts` as either WGS84 lat/lng **or** OS
+National Grid easting/northing (auto-converted), keyed by `area` + `berth`. Those
+trains are then placed at their *exact* positions and face their direction of
+travel, instead of being approximated along a hand-drawn line.
+
 ## Phase 4 — native apps (later)
 
 Wrap the web build with **Capacitor** to produce native iOS/Android projects

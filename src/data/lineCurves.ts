@@ -37,3 +37,27 @@ export function lineStopParams(lineId: string): number[] {
   if (!p) throw new Error(`No stop params for line: ${lineId}`);
   return p;
 }
+
+// Pre-sampled points per line, for nearest-line lookups.
+const SAMPLES = 140;
+const samples: { lineId: string; t: number; point: THREE.Vector3 }[] = [];
+for (const ln of LINES) {
+  const curve = cache.get(ln.id)!;
+  for (let i = 0; i <= SAMPLES; i++) {
+    const t = i / SAMPLES;
+    samples.push({ lineId: ln.id, t, point: curve.getPointAt(t) });
+  }
+}
+
+/**
+ * Nearest point on any line to a world position — used to assign a colour/line
+ * (and a `t` for the HUD) to a berth we only have raw coordinates for.
+ */
+export function nearestOnLines(point: THREE.Vector3): { lineId: string; t: number } {
+  let best = { lineId: LINES[0].id, t: 0, d: Infinity };
+  for (const s of samples) {
+    const d = point.distanceToSquared(s.point);
+    if (d < best.d) best = { lineId: s.lineId, t: s.t, d };
+  }
+  return { lineId: best.lineId, t: best.t };
+}

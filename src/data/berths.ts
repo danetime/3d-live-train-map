@@ -14,6 +14,10 @@
  *     server/data/observed-berths.json onto lines here).
  */
 import { LINES } from "./network";
+import { project } from "./geo";
+import { nearestOnLines } from "./lineCurves";
+import { osGridToLatLng } from "./osgb";
+import type { LatLng } from "./types";
 
 export type BerthPos = { lineId: string; t: number };
 
@@ -46,7 +50,51 @@ const REAL_BERTHS: [string, BerthPos][] = [
 ];
 for (const [k, pos] of REAL_BERTHS) berths.set(k, pos);
 
-/** Look up a berth's position, or null if we haven't mapped it yet. */
+/** Look up a berth's line position, or null if we haven't mapped it yet. */
 export function berthPosition(area: string, berth: string): BerthPos | null {
   return berths.get(key(area, berth)) ?? null;
+}
+
+// --- 3. REAL berth COORDINATES (the precise path) ---
+/**
+ * If you can get real berth/signal coordinates, drop them here and trains are
+ * placed at their exact positions (no hand-mapping to lines needed). Supply
+ * either WGS84 lat/lng OR OS National Grid easting/northing — both work.
+ *
+ *   { area: "SW", berth: "0123", lat: 50.5290, lng: -3.6000 }
+ *   { area: "SW", berth: "0125", easting: 286000, northing: 71500 }
+ */
+type CoordEntry = {
+  area: string;
+  berth: string;
+  lat?: number;
+  lng?: number;
+  easting?: number;
+  northing?: number;
+};
+
+const BERTH_COORDS: CoordEntry[] = [
+  // Paste real berth coordinates here.
+];
+
+/** area:berth → exact lat/lng plus the nearest line (for colour + HUD). */
+const coords = new Map<string, { ll: LatLng; lineId: string; t: number }>();
+for (const c of BERTH_COORDS) {
+  let ll: LatLng | null = null;
+  if (typeof c.lat === "number" && typeof c.lng === "number") {
+    ll = { lat: c.lat, lng: c.lng };
+  } else if (typeof c.easting === "number" && typeof c.northing === "number") {
+    ll = osGridToLatLng(c.easting, c.northing);
+  }
+  if (!ll) continue;
+  const near = nearestOnLines(project(ll));
+  coords.set(key(c.area, c.berth), { ll, lineId: near.lineId, t: near.t });
+}
+
+/** Exact coordinate for a berth (with nearest line), or null if none supplied. */
+export function berthLatLng(
+  area: string,
+  berth: string,
+): { ll: LatLng; lineId: string; t: number } | null {
+  return coords.get(key(area, berth)) ?? null;
 }

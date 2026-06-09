@@ -6,6 +6,7 @@ import * as THREE from "three";
 import type { Train as TrainModel } from "../data/types";
 import { LINE_BY_ID } from "../data/network";
 import { lineCurve } from "../data/lineCurves";
+import { project } from "../data/geo";
 import { useTrainStore } from "../store/useTrainStore";
 import { trainPositions } from "../sim/trainPositions";
 
@@ -114,11 +115,20 @@ function HeadcodeLabel({ code, selected }: { code: string; selected: boolean }) 
   );
 }
 
+/** Ease an angle toward a target by fraction k, taking the short way round. */
+function easeAngle(cur: number, target: number, k: number): number {
+  let d = target - cur;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  return cur + d * k;
+}
+
 export function Train({ train }: { train: TrainModel }) {
   const groupRef = useRef<THREE.Group>(null);
   const tRef = useRef(train.t);
   const dirRef = useRef<1 | -1>(train.direction);
   const sinceSync = useRef(0);
+  const placed = useRef(false);
 
   const selectedId = useTrainStore((s) => s.selectedId);
   const advance = useTrainStore((s) => s.advance);
@@ -136,31 +146,56 @@ export function Train({ train }: { train: TrainModel }) {
     const group = groupRef.current;
     if (!group) return;
 
-    // Advance along the spline. Mock trains self-propel (speed > 0); a real
-    // feed would set speed 0 and update train.t externally, which we'd ease to.
-    if (train.speed > 0) {
-      tRef.current += dirRef.current * train.speed * Math.min(delta, 0.1);
+    let syncHeading = train.headingTo;
+
+    if (train.pos) {
+      // Point mode: we have exact berth coordinates. Ease to the position and
+      // face the direction of travel (derived from how it's moving).
+      project(train.pos, pos);
+      if (!placed.current) {
+        group.position.set(pos.x, RIDE_HEIGHT, pos.z);
+        placed.current = true;
+      }
+      const dx = pos.x - group.position.x;
+      const dz = pos.z - group.position.z;
+      const k = Math.min(delta * 1.8, 1);
+      group.position.set(group.position.x + dx * k, RIDE_HEIGHT, group.position.z + dz * k);
+      if (Math.hypot(dx, dz) > 0.02) {
+        group.rotation.y = easeAngle(group.rotation.y, Math.atan2(dx, dz), 0.25);
+      }
     } else {
-      // Live feed: ease toward the externally supplied t and follow its heading.
-      tRef.current += (train.t - tRef.current) * Math.min(delta * 2, 1);
-      dirRef.current = train.direction;
+      // Spline mode. Mock trains self-propel (speed > 0); a live feed sets
+      // speed 0 and updates train.t externally, which we ease toward.
+      if (train.speed > 0) {
+        tRef.current += dirRef.current * train.speed * Math.min(delta, 0.1);
+      } else {
+        tRef.current += (train.t - tRef.current) * Math.min(delta * 2, 1);
+        dirRef.current = train.direction;
+      }
+
+      // Bounce off the ends of the line (turnaround at the termini).
+      if (tRef.current >= 1) {
+        tRef.current = 1;
+        dirRef.current = -1;
+      } else if (tRef.current <= 0) {
+        tRef.current = 0;
+        dirRef.current = 1;
+      }
+
+      const t = THREE.MathUtils.clamp(tRef.current, 0.0001, 0.9999);
+      curve.getPointAt(t, pos);
+      curve.getTangentAt(t, tangent).multiplyScalar(dirRef.current);
+      group.position.set(pos.x, RIDE_HEIGHT, pos.z);
+      group.rotation.y = Math.atan2(tangent.x, tangent.z);
+
+      // Mock trains flip heading at the termini; live trains keep the feed's.
+      syncHeading =
+        train.speed > 0
+          ? dirRef.current === 1
+            ? line.destination
+            : "Exeter St David's"
+          : train.headingTo;
     }
-
-    // Bounce off the ends of the line (turnaround at the termini).
-    if (tRef.current >= 1) {
-      tRef.current = 1;
-      dirRef.current = -1;
-    } else if (tRef.current <= 0) {
-      tRef.current = 0;
-      dirRef.current = 1;
-    }
-
-    const t = THREE.MathUtils.clamp(tRef.current, 0.0001, 0.9999);
-    curve.getPointAt(t, pos);
-    curve.getTangentAt(t, tangent).multiplyScalar(dirRef.current);
-
-    group.position.set(pos.x, RIDE_HEIGHT, pos.z);
-    group.rotation.y = Math.atan2(tangent.x, tangent.z);
 
     let entry = trainPositions.get(train.id);
     if (!entry) {
@@ -176,16 +211,9 @@ export function Train({ train }: { train: TrainModel }) {
       advance([
         {
           id: train.id,
-          t: tRef.current,
-          direction: dirRef.current,
-          // Mock trains flip heading at the termini; live trains keep the real
-          // destination supplied by the feed.
-          headingTo:
-            train.speed > 0
-              ? dirRef.current === 1
-                ? line.destination
-                : "Exeter St David's"
-              : train.headingTo,
+          t: train.pos ? train.t : tRef.current,
+          direction: train.pos ? train.direction : dirRef.current,
+          headingTo: syncHeading,
         },
       ]);
     }

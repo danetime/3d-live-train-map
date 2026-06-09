@@ -49,4 +49,10 @@ export type Train = {
   headingTo: string;
   /** TD berth the train currently occupies (live feed only). */
   berth?: string;
+  /**
+   * Exact geographic position, when we have real berth coordinates. If set, the
+   * train is rendered here (and faces its direction of travel) instead of being
+   * placed along its line's spline by `t`.
+   */
+  pos?: LatLng;
 };

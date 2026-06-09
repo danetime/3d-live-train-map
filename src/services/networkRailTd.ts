@@ -7,7 +7,7 @@
  * you can see how many are waiting to be mapped). Reconnects automatically.
  */
 import type { Train } from "../data/types";
-import { berthPosition } from "../data/berths";
+import { berthPosition, berthLatLng } from "../data/berths";
 import { LINE_BY_ID } from "../data/network";
 
 const WS_URL = (import.meta.env.VITE_TD_WS_URL as string) || "ws://localhost:4001";
@@ -27,7 +27,9 @@ export function connectTdFeed(
     const out: Train[] = [];
     let unmapped = 0;
     for (const r of raw) {
-      const pos = berthPosition(r.area, r.berth);
+      // Prefer exact coordinates if we have them; else the line map.
+      const exact = berthLatLng(r.area, r.berth);
+      const pos = exact ?? berthPosition(r.area, r.berth);
       if (!pos) {
         unmapped++;
         continue;
@@ -47,6 +49,7 @@ export function connectTdFeed(
         speed: 0, // externally positioned; Train.tsx eases between berths
         headingTo: direction === 1 ? line?.destination ?? "" : "Exeter St David's",
         berth: r.berth,
+        pos: exact ? exact.ll : undefined,
       });
     }
     if (unmapped > 0) {
