@@ -223,19 +223,19 @@ const FORCE_GEOMETRY: Record<string, LatLng[]> = {
 };
 
 function geometryFor(id: string, stops: string[]): LatLng[] {
+  // Verified, baked geometry is the source of truth — reliable and independent
+  // of the (flaky) OSM fetch. OSM is only a fallback for any line we haven't
+  // hand-traced, and only if it actually reaches that line's terminus.
   if (FORCE_GEOMETRY[id]) return FORCE_GEOMETRY[id];
+  if (HAND_GEOMETRY[id]) return HAND_GEOMETRY[id];
   const osm = osmGeometry[id];
   if (osm && osm.length > 1) {
-    // Guard against stale fetched data: if the stored geometry doesn't reach
-    // this line's terminus (e.g. fetched before the line was extended), ignore
-    // it and fall back, otherwise the line silently stops short.
     const last = osm[osm.length - 1];
     const term = stationPos(stops[stops.length - 1]);
-    const far = Math.abs(last[0] - term.lat) + Math.abs(last[1] - term.lng) > 0.04;
-    if (!far) return osm.map(([lat, lng]) => ({ lat, lng }));
-    console.warn(`[map] lineGeometry.json for "${id}" is stale (stops short) — re-run: npm run fetch:track`);
+    const reaches = Math.abs(last[0] - term.lat) + Math.abs(last[1] - term.lng) <= 0.04;
+    if (reaches) return osm.map(([lat, lng]) => ({ lat, lng }));
+    console.warn(`[map] lineGeometry.json for "${id}" stops short — using fallback`);
   }
-  if (HAND_GEOMETRY[id]) return HAND_GEOMETRY[id];
   return stops.map(stationPos);
 }
 
