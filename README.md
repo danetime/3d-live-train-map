@@ -52,26 +52,36 @@ OpenRailwayMap. Each line is smoothed into a spline, so a handful of waypoints i
 enough to capture the route's shape — accuracy can be improved any time by
 dropping more precise `railway=rail` coordinates into `network.ts`.
 
-## Phase 2 — real live trains (Realtime Trains API)
+## Phase 2 — real live trains (Realtime Trains API) ✅ wired up
 
 Network Rail's free feeds do **not** include train GPS coordinates (only
 signal-berth positions over a STOMP stream, needing your own backend and a
 signal→coordinate map). The pragmatic route for this app is the **Realtime Trains
-(RTT) API** — simple REST/JSON, free for non-commercial use.
+(RTT) API** — simple REST/JSON, free for non-commercial use. This is implemented;
+the app already tries the live feed and falls back to the simulation until you
+add credentials.
 
-1. **Register** at <https://api-portal.rtt.io/> to get HTTP Basic auth
-   credentials.
-2. **Keep credentials off the client.** Add a small proxy that injects the
-   `Authorization` header:
-   - Dev: a Vite proxy under `/api/rtt` → `https://api.rtt.io`.
-   - Prod: a serverless function (Cloudflare/Vercel) holding the secret.
-3. Implement `src/services/realtimeTrains.ts` (`fetchExeterServices` +
-   `toTrains`) and switch the feed in `src/App.tsx` from `"mock"` to
-   `"realtime-trains"`.
+**To go live:**
 
-RTT gives schedule + last-reported timing point (not GPS), so each train's
-position is **interpolated** along its baked line between the last reported
-station and the next — smooth, and plenty accurate for this stylised map.
+1. **Register** at <https://api-portal.rtt.io/> (free, non-commercial) for HTTP
+   Basic auth credentials.
+2. Copy the env template and fill them in:
+   ```bash
+   cp .env.example .env
+   # edit .env → RTT_USERNAME=... and RTT_PASSWORD=...
+   ```
+3. `npm run dev` — the badge in the top-left flips from **SIM** to **LIVE** and
+   real services calling at Exeter appear, animating along the lines.
+
+**How it works:** the Vite dev proxy (`vite.config.ts`) forwards `/api/rtt/*` to
+the RTT API and attaches the `Authorization` header server-side, so credentials
+never reach the browser. `src/services/realtimeTrains.ts` fetches the services at
+Exeter St David's, pulls each one's calling points, matches them to a line by CRS
+code, and **interpolates** the train's progress along that line's spline from its
+real timetable (RTT gives schedule + last-reported times, not GPS — smooth and
+plenty accurate for this stylised map). For production, deploy the included
+serverless proxy at `api/rtt/[...path].js` (Vercel-style) with the same two env
+vars.
 
 ## Phase 3 — native apps (later)
 

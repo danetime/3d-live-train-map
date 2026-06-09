@@ -117,7 +117,9 @@ export function Train({ train }: { train: TrainModel }) {
     if (train.speed > 0) {
       tRef.current += dirRef.current * train.speed * Math.min(delta, 0.1);
     } else {
+      // Live feed: ease toward the externally supplied t and follow its heading.
       tRef.current += (train.t - tRef.current) * Math.min(delta * 2, 1);
+      dirRef.current = train.direction;
     }
 
     // Bounce off the ends of the line (turnaround at the termini).
@@ -152,7 +154,14 @@ export function Train({ train }: { train: TrainModel }) {
           id: train.id,
           t: tRef.current,
           direction: dirRef.current,
-          headingTo: dirRef.current === 1 ? line.destination : "Exeter St David's",
+          // Mock trains flip heading at the termini; live trains keep the real
+          // destination supplied by the feed.
+          headingTo:
+            train.speed > 0
+              ? dirRef.current === 1
+                ? line.destination
+                : "Exeter St David's"
+              : train.headingTo,
         },
       ]);
     }

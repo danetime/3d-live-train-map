@@ -1,9 +1,14 @@
 import { create } from "zustand";
 import type { Train } from "../data/types";
 
+export type DataSource = "sim" | "live";
+
 type TrainStore = {
   trains: Train[];
   selectedId: string | null;
+  /** Whether trains are simulated or coming from the live RTT feed. */
+  dataSource: DataSource;
+  setDataSource: (source: DataSource) => void;
   /** Replace the full set of trains (called by the feed each tick). */
   setTrains: (trains: Train[]) => void;
   /** Update progress for the animation loop without replacing identities. */
@@ -14,6 +19,8 @@ type TrainStore = {
 export const useTrainStore = create<TrainStore>((set) => ({
   trains: [],
   selectedId: null,
+  dataSource: "sim",
+  setDataSource: (dataSource) => set({ dataSource }),
   setTrains: (trains) => set({ trains }),
   advance: (updates) =>
     set((state) => {

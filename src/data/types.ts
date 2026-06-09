@@ -24,6 +24,8 @@ export type Line = {
   destination: string;
   /** Hex colour used to draw the track and trains. */
   color: string;
+  /** Ordered CRS station codes from Exeter outwards (matches `points`). */
+  stops: string[];
   /** Ordered lat/lng points from Exeter outwards, smoothed into a spline. */
   points: LatLng[];
 };

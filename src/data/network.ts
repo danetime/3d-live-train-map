@@ -29,7 +29,7 @@ export const STATIONS: Station[] = [
 
   // Riviera line → Newton Abbot (via the Dawlish sea wall)
   { code: "EXT", name: "Exeter St Thomas", pos: { lat: 50.7160, lng: -3.5380 } },
-  { code: "STA", name: "Starcross", pos: { lat: 50.6280, lng: -3.4490 } },
+  { code: "SCS", name: "Starcross", pos: { lat: 50.6280, lng: -3.4490 } },
   { code: "DWL", name: "Dawlish", pos: { lat: 50.5810, lng: -3.4660 } },
   { code: "TGM", name: "Teignmouth", pos: { lat: 50.5470, lng: -3.4960 } },
   { code: "NTA", name: "Newton Abbot", pos: { lat: 50.5290, lng: -3.6000 } },
@@ -58,45 +58,26 @@ const stationPos = (code: string) => {
   return s.pos;
 };
 
-/** Build a line's point list from a sequence of station codes. */
-const route = (codes: string[]) => codes.map(stationPos);
+/** Define a line from an ordered list of CRS codes (Exeter outwards). */
+const line = (
+  id: string,
+  name: string,
+  destination: string,
+  color: string,
+  stops: string[],
+): Line => ({ id, name, destination, color, stops, points: stops.map(stationPos) });
 
 export const LINES: Line[] = [
-  {
-    id: "exmouth",
-    name: "Avocet Line",
-    destination: "Exmouth",
-    color: "#e53e3e",
-    points: route(["EXD", "EXC", "POL", "DIG", "TOP", "EXN", "LYM", "EXM"]),
-  },
-  {
-    id: "newton-abbot",
-    name: "Riviera Line",
-    destination: "Newton Abbot",
-    color: "#3182ce",
-    points: route(["EXD", "EXT", "STA", "DWL", "TGM", "NTA"]),
-  },
-  {
-    id: "taunton",
-    name: "Main Line",
-    destination: "Taunton",
-    color: "#38a169",
-    points: route(["EXD", "TVP", "TAU"]),
-  },
-  {
-    id: "barnstaple",
-    name: "Tarka Line",
-    destination: "Barnstaple",
-    color: "#d69e2e",
-    points: route(["EXD", "NTC", "CDF", "YEO", "EGG", "KIG", "UMB", "BNP"]),
-  },
-  {
-    id: "okehampton",
-    name: "Dartmoor Line",
-    destination: "Okehampton",
-    color: "#805ad5",
-    points: route(["EXD", "NTC", "CDF", "YEO", "SPC", "OKE"]),
-  },
+  line("exmouth", "Avocet Line", "Exmouth", "#e53e3e",
+    ["EXD", "EXC", "POL", "DIG", "TOP", "EXN", "LYM", "EXM"]),
+  line("newton-abbot", "Riviera Line", "Newton Abbot", "#3182ce",
+    ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA"]),
+  line("taunton", "Main Line", "Taunton", "#38a169",
+    ["EXD", "TVP", "TAU"]),
+  line("barnstaple", "Tarka Line", "Barnstaple", "#d69e2e",
+    ["EXD", "NTC", "CDF", "YEO", "EGG", "KIG", "UMB", "BNP"]),
+  line("okehampton", "Dartmoor Line", "Okehampton", "#805ad5",
+    ["EXD", "NTC", "CDF", "YEO", "SPC", "OKE"]),
 ];
 
 export const LINE_BY_ID = new Map(LINES.map((l) => [l.id, l]));

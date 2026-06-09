@@ -6,14 +6,21 @@ export function Hud() {
   const trains = useTrainStore((s) => s.trains);
   const selectedId = useTrainStore((s) => s.selectedId);
   const select = useTrainStore((s) => s.select);
+  const dataSource = useTrainStore((s) => s.dataSource);
 
   const selected = trains.find((t) => t.id === selectedId) ?? null;
+  const live = dataSource === "live";
 
   return (
     <>
       <div className="hud hud-top-left">
-        <h1>🚆 Exeter Live</h1>
-        <p className="subtitle">3D train map · prototype (simulated data)</p>
+        <h1>
+          🚆 Exeter Live
+          <span className={`badge ${live ? "live" : "sim"}`}>{live ? "LIVE" : "SIM"}</span>
+        </h1>
+        <p className="subtitle">
+          3D train map · {live ? "live Realtime Trains data" : "simulated data"}
+        </p>
 
         <div className="legend">
           {LINES.map((line) => (
