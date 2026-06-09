@@ -10,7 +10,6 @@ dist-ssr
 *.tsbuildinfo
 
 # Server: downloaded Network Rail reference caches + generated dry-run output
-# (the committed samples under server/data/sample/ are kept)
+# (the committed corridor server/data/locations.csv and samples are kept)
 server/data/*.json
-server/data/locations.csv
 server/data/sample/output.berthCoordinates.json

@@ -102,12 +102,16 @@ function parseSmart(json) {
 function parseCorpus(json) {
   const rows = json.TIPLOCDATA || (Array.isArray(json) ? json : []);
   const stanoxToTiploc = new Map();
+  const stanoxToCrs = new Map();
   for (const r of rows) {
     const stanox = (r.STANOX || "").trim();
+    if (!stanox || stanox === "00000") continue;
     const tiploc = (r.TIPLOC || "").trim();
-    if (stanox && stanox !== "00000" && tiploc) stanoxToTiploc.set(stanox, tiploc.toUpperCase());
+    const crs = (r["3ALPHA"] || r.CRS || "").trim();
+    if (tiploc) stanoxToTiploc.set(stanox, tiploc.toUpperCase());
+    if (crs) stanoxToCrs.set(stanox, crs.toUpperCase());
   }
-  return stanoxToTiploc;
+  return { stanoxToTiploc, stanoxToCrs };
 }
 
 function parseLocations(csv) {
@@ -122,6 +126,7 @@ function parseLocations(csv) {
   };
   const iStanox = col("STANOX");
   const iTiploc = col("TIPLOC");
+  const iCrs = col("CRS", "3ALPHA", "CRSCODE");
   const iLat = col("LAT", "LATITUDE");
   const iLon = col("LON", "LONG", "LONGITUDE");
   const iE = col("EASTING", "EASTINGS");
@@ -129,6 +134,7 @@ function parseLocations(csv) {
 
   const byStanox = new Map();
   const byTiploc = new Map();
+  const byCrs = new Map();
   for (let i = 1; i < lines.length; i++) {
     const c = lines[i].split(",");
     if (c.length < 2) continue;
@@ -145,8 +151,9 @@ function parseLocations(csv) {
     if (!ll) continue;
     if (iStanox >= 0 && c[iStanox]?.trim()) byStanox.set(c[iStanox].trim(), ll);
     if (iTiploc >= 0 && c[iTiploc]?.trim()) byTiploc.set(c[iTiploc].trim().toUpperCase(), ll);
+    if (iCrs >= 0 && c[iCrs]?.trim()) byCrs.set(c[iCrs].trim().toUpperCase(), ll);
   }
-  return { byStanox, byTiploc };
+  return { byStanox, byTiploc, byCrs };
 }
 
 // ---- main ----
@@ -154,11 +161,11 @@ function parseLocations(csv) {
 async function main() {
   const smart = parseSmart(await getReference("SMART", "smart.json"));
 
-  let corpus = new Map();
+  let corpus = { stanoxToTiploc: new Map(), stanoxToCrs: new Map() };
   try {
     corpus = parseCorpus(await getReference("CORPUS", "corpus.json"));
   } catch (e) {
-    console.warn(`[coords] CORPUS unavailable (${e.message}); STANOX→TIPLOC join disabled`);
+    console.warn(`[coords] CORPUS unavailable (${e.message}); STANOX→TIPLOC/CRS join disabled`);
   }
 
   const locPath = sampleMode ? join(SAMPLE, "locations.csv") : join(DATA, "locations.csv");
@@ -169,17 +176,22 @@ async function main() {
         "from BPLAN/TPS geography or an open community dataset. See server/README.md.",
     );
   }
-  const { byStanox, byTiploc } = parseLocations(readFileSync(locPath, "utf8"));
+  const { byStanox, byTiploc, byCrs } = parseLocations(readFileSync(locPath, "utf8"));
 
   const out = [];
   let unresolved = 0;
   for (const [key, { stanox }] of smart) {
     const [area, berth] = key.split("|");
     if (areaFilter.length && !areaFilter.includes(area)) continue;
+    // Resolve a coordinate by STANOX, then TIPLOC, then CRS (via CORPUS).
     let ll = byStanox.get(stanox);
     if (!ll) {
-      const tiploc = corpus.get(stanox);
+      const tiploc = corpus.stanoxToTiploc.get(stanox);
       if (tiploc) ll = byTiploc.get(tiploc);
+    }
+    if (!ll) {
+      const crs = corpus.stanoxToCrs.get(stanox);
+      if (crs) ll = byCrs.get(crs);
     }
     if (!ll) {
       unresolved++;

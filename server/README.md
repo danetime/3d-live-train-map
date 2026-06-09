@@ -78,9 +78,12 @@ npm run build:coords:sample   # uses server/data/sample/*, prints resolved berth
 
 **For real:**
 
-1. Provide a coordinate table at `server/data/locations.csv` with columns
-   `STANOX` and/or `TIPLOC`, plus `LAT`,`LON` **or** `EASTING`,`NORTHING`. Get it
-   from BPLAN/TPS geography (Rail Data Marketplace) or an open community dataset
+1. A coordinate table is already provided at `server/data/locations.csv` —
+   real coordinates for every station on the five Exeter-area lines, keyed by
+   CRS (joined to berths via SMART→CORPUS). That's enough to light up the test
+   corridor. For the whole network, replace it with a fuller table (columns
+   `STANOX`/`TIPLOC`/`CRS` + `LAT`,`LON` **or** `EASTING`,`NORTHING`) from
+   BPLAN/TPS geography (Rail Data Marketplace) or an open community dataset
    (e.g. the openraildata "TIPLOC Eastings and Northings" list).
 2. With `NR_USERNAME`/`NR_PASSWORD` set in `.env`:
    ```bash
