@@ -17,6 +17,7 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { LINES } from "../data/network";
 import { lineCurve, lineStopParams, branchOffset } from "../data/lineCurves";
+import { realSignalsFor } from "../data/realSignals";
 import { useTrainStore } from "../store/useTrainStore";
 import { GAUGE } from "./RailNetwork";
 
@@ -49,20 +50,37 @@ export function Signals() {
         ? lineStopParams(line.id)[line.stops.indexOf(line.drawFrom)]
         : 0;
       const count = Math.max(2, Math.floor(curve.getLength() / SPACING));
+      const blockT = 1 / count;
+
+      // Real signals (transcribed from route diagrams) where we have them;
+      // synthetic ones fill the route beyond the transcribed coverage.
+      const real = realSignalsFor(line.id).filter((s) => s.t >= tStart);
 
       for (const dir of [1, -1] as const) {
-        let seq = 0;
+        const realDir = real.filter((s) => s.dir === dir);
+        const maxRealT = realDir.length ? Math.max(...realDir.map((s) => s.t)) : 0;
+
+        const list = [...realDir];
+        let seq = realDir.length;
         for (let i = 1; i < count; i++) {
           const t = i / count;
           if (t < tStart) continue; // don't signal the undrawn shared trunk
-          curve.getPointAt(t, p);
-          curve.getTangentAt(t, tan);
+          if (t <= maxRealT + blockT * 0.7) continue; // real data covers this
+          // Down (dir +1) even numbers, up odd — loosely like real schemes.
+          const num = (lineIdx + 1) * 100 + 2 * seq++ + (dir === 1 ? 0 : 1);
+          list.push({ id: `E${num}`, t, dir });
+        }
+        list.sort((a, b) => a.t - b.t);
+
+        list.forEach((sig, idx) => {
+          curve.getPointAt(sig.t, p);
+          curve.getTangentAt(sig.t, tan);
 
           // Post sits beyond the rail it applies to: the dir-rail is at
           // lateral dir*GAUGE (double track), following any branch offset.
           const lateral =
             (line.doubleTrack ? GAUGE : 0) * dir +
-            branchOffset(line, t) +
+            branchOffset(line, sig.t) +
             dir * 0.95;
           const x = p.x + tan.z * lateral;
           const z = p.z - tan.x * lateral;
@@ -77,18 +95,19 @@ export function Signals() {
           o.updateMatrix();
           lampMatrices.push(o.matrix.clone());
 
-          // Down (dir +1) even numbers, up odd — loosely like real schemes.
-          const num = (lineIdx + 1) * 100 + 2 * seq++ + (dir === 1 ? 0 : 1);
-          const next = dir === 1 ? (i + 1) / count : (i - 1) / count;
+          // Block ahead of this signal in its direction of travel, up to the
+          // next signal on the same rail (or one default block at the end).
+          const ahead = dir === 1 ? list[idx + 1]?.t : list[idx - 1]?.t;
+          const next = ahead ?? sig.t + dir * blockT;
           signals.push({
-            id: `E${num}`,
+            id: sig.id,
             lineId: line.id,
             dir,
-            lo: Math.min(t, next) - 0.004,
-            hi: Math.max(t, next) + 0.004,
+            lo: Math.min(sig.t, next) - 0.004,
+            hi: Math.max(sig.t, next) + 0.004,
             doubleTrack: !!line.doubleTrack,
           });
-        }
+        });
       }
     });
     return { signals, postMatrices, lampMatrices };
