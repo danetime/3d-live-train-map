@@ -86,7 +86,18 @@ const HAND_GEOMETRY: Record<string, LatLng[]> = {
 
 const osmGeometry = lineGeometryJson as Record<string, [number, number][]>;
 
+/**
+ * Geometry that overrides even the real OSM track. Used for clean schematic
+ * branches: the real Dartmoor line loops via Yeoford/Coleford Junction, which
+ * looks tangled on the diagram, so we fork it straight off the trunk at
+ * Crediton towards Okehampton.
+ */
+const FORCE_GEOMETRY: Record<string, LatLng[]> = {
+  okehampton: ["EXD", "NTC", "CDF", "SPC", "OKE"].map(stationPos),
+};
+
 function geometryFor(id: string, stops: string[]): LatLng[] {
+  if (FORCE_GEOMETRY[id]) return FORCE_GEOMETRY[id];
   const osm = osmGeometry[id];
   if (osm && osm.length > 1) return osm.map(([lat, lng]) => ({ lat, lng }));
   if (HAND_GEOMETRY[id]) return HAND_GEOMETRY[id];
@@ -112,10 +123,11 @@ export const LINES: Line[] = [
     ["EXD", "TVP", "TAU"], { doubleTrack: true }),
   line("barnstaple", "Tarka Line", "Barnstaple", "#d69e2e",
     ["EXD", "NTC", "CDF", "YEO", "EGG", "KIG", "UMB", "BNP"]),
-  // Shares the trunk with the Tarka line out to Crediton, then peels off to
-  // the left towards Okehampton (Tarka carries straight on to Barnstaple).
+  // Shares the trunk with the Tarka line out to Crediton, then forks straight
+  // off towards Okehampton (Tarka carries on to Barnstaple). Schematic fork —
+  // see FORCE_GEOMETRY.
   line("okehampton", "Dartmoor Line", "Okehampton", "#805ad5",
-    ["EXD", "NTC", "CDF", "YEO", "SPC", "OKE"], { drawFrom: "CDF", drawOffset: 2.0 }),
+    ["EXD", "NTC", "CDF", "YEO", "SPC", "OKE"], { drawFrom: "CDF" }),
 ];
 
 export const LINE_BY_ID = new Map(LINES.map((l) => [l.id, l]));
