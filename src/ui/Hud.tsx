@@ -85,6 +85,12 @@ export function Hud() {
                 · berth <strong>{selected.berth}</strong>
               </>
             )}
+            {selected.platform && (
+              <>
+                {" "}
+                · platform <strong>{selected.platform}</strong>
+              </>
+            )}
           </div>
         </div>
       )}

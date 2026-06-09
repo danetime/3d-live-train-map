@@ -73,6 +73,8 @@ type CoordEntry = {
   lng?: number;
   easting?: number;
   northing?: number;
+  /** Platform at this berth's location, from SMART (e.g. "1".."6" at EXD). */
+  platform?: string;
 };
 
 const BERTH_COORDS: CoordEntry[] = [
@@ -82,7 +84,10 @@ const BERTH_COORDS: CoordEntry[] = [
 ];
 
 /** area:berth → exact lat/lng plus the nearest line (for colour + HUD). */
-const coords = new Map<string, { ll: LatLng; lineId: string; t: number }>();
+const coords = new Map<
+  string,
+  { ll: LatLng; lineId: string; t: number; platform?: string }
+>();
 for (const c of BERTH_COORDS) {
   let ll: LatLng | null = null;
   if (typeof c.lat === "number" && typeof c.lng === "number") {
@@ -92,13 +97,13 @@ for (const c of BERTH_COORDS) {
   }
   if (!ll) continue;
   const near = nearestOnLines(project(ll));
-  coords.set(key(c.area, c.berth), { ll, lineId: near.lineId, t: near.t });
+  coords.set(key(c.area, c.berth), { ll, lineId: near.lineId, t: near.t, platform: c.platform });
 }
 
 /** Exact coordinate for a berth (with nearest line), or null if none supplied. */
 export function berthLatLng(
   area: string,
   berth: string,
-): { ll: LatLng; lineId: string; t: number } | null {
+): { ll: LatLng; lineId: string; t: number; platform?: string } | null {
   return coords.get(key(area, berth)) ?? null;
 }

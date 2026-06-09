@@ -49,6 +49,7 @@ export function connectTdFeed(
         speed: 0, // externally positioned; Train.tsx eases between berths
         headingTo: direction === 1 ? line?.destination ?? "" : "Exeter St David's",
         berth: r.berth,
+        platform: exact?.platform,
         pos: exact ? exact.ll : undefined,
       });
     }

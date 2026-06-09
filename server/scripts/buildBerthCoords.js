@@ -80,17 +80,18 @@ async function getReference(type, sampleFile) {
 
 function parseSmart(json) {
   const rows = json.BERTHDATA || json.SMARTBERTHDATA || (Array.isArray(json) ? json : []);
-  const berthStanox = new Map(); // "area|berth" → { stanox, score }
+  const berthStanox = new Map(); // "area|berth" → { stanox, score, platform }
   for (const r of rows) {
     const area = r.TD;
     const stanox = (r.STANOX || "").trim();
     if (!area || !stanox || stanox === "00000") continue;
     const isArrival = r.EVENT === "A" || r.EVENT === "C";
+    const platform = (r.PLATFORM || "").trim() || undefined;
     const consider = (berth, score) => {
       if (!berth || /^0+$/.test(berth)) return;
       const key = `${area}|${berth}`;
       const cur = berthStanox.get(key);
-      if (!cur || score > cur.score) berthStanox.set(key, { stanox, score });
+      if (!cur || score > cur.score) berthStanox.set(key, { stanox, score, platform });
     };
     // Arrivals into TOBERTH are the strongest position signal for a berth.
     consider(r.TOBERTH, isArrival ? 2 : 1);
@@ -180,7 +181,7 @@ async function main() {
 
   const out = [];
   let unresolved = 0;
-  for (const [key, { stanox }] of smart) {
+  for (const [key, { stanox, platform }] of smart) {
     const [area, berth] = key.split("|");
     if (areaFilter.length && !areaFilter.includes(area)) continue;
     // Resolve a coordinate by STANOX, then TIPLOC, then CRS (via CORPUS).
@@ -197,7 +198,13 @@ async function main() {
       unresolved++;
       continue;
     }
-    out.push({ area, berth, lat: +ll.lat.toFixed(6), lng: +ll.lng.toFixed(6) });
+    out.push({
+      area,
+      berth,
+      lat: +ll.lat.toFixed(6),
+      lng: +ll.lng.toFixed(6),
+      ...(platform ? { platform } : {}),
+    });
   }
   out.sort((a, b) => (a.area + a.berth).localeCompare(b.area + b.berth));
 
