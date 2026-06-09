@@ -77,44 +77,106 @@ export const stationPos = (code: string): LatLng => {
  * produced by scripts/fetchTrackGeometry.mjs) wins; then these hand-traced
  * points; otherwise we fall back to a straightish line through the stops.
  */
+/**
+ * Shared Exeter→Newton Abbot trunk: down the west bank of the Exe, along the
+ * Dawlish sea wall, then up the Teign estuary. Used by both SW lines.
+ */
+const TRUNK_SW: LatLng[] = [
+  { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
+  { lat: 50.7160, lng: -3.5380 }, // Exeter St Thomas
+  { lat: 50.7060, lng: -3.5260 }, // Marsh Barton
+  { lat: 50.6920, lng: -3.5050 }, // Countess Wear
+  { lat: 50.6790, lng: -3.4950 }, // Exminster
+  { lat: 50.6520, lng: -3.4620 }, // Powderham
+  { lat: 50.6280, lng: -3.4490 }, // Starcross
+  { lat: 50.5990, lng: -3.4430 }, // Dawlish Warren
+  { lat: 50.5900, lng: -3.4480 }, // the sea wall
+  { lat: 50.5810, lng: -3.4660 }, // Dawlish
+  { lat: 50.5660, lng: -3.4800 }, // Parson's Tunnel
+  { lat: 50.5470, lng: -3.4960 }, // Teignmouth
+  { lat: 50.5450, lng: -3.5260 }, // Teign north bank
+  { lat: 50.5400, lng: -3.5640 }, // Bishopsteignton
+  { lat: 50.5290, lng: -3.6000 }, // Newton Abbot
+];
+
 const HAND_GEOMETRY: Record<string, LatLng[]> = {
-  // Main line beyond Newton Abbot: over Dainton bank, Totnes, the South Devon
-  // banks past South Brent/Ivybridge, then Plympton into Plymouth.
-  "newton-abbot": [
+  // Avocet line: out through Exeter Central, then south down the east bank of
+  // the Exe estuary, hugging the shore through Lympstone.
+  exmouth: [
     { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
-    { lat: 50.7160, lng: -3.5380 }, // Exeter St Thomas
-    { lat: 50.6850, lng: -3.4990 }, // Exminster, west bank of the Exe
-    { lat: 50.6280, lng: -3.4490 }, // Starcross
-    { lat: 50.6080, lng: -3.4440 }, // Dawlish Warren
-    { lat: 50.5810, lng: -3.4660 }, // Dawlish
-    { lat: 50.5470, lng: -3.4960 }, // Teignmouth
-    { lat: 50.5460, lng: -3.5430 }, // along the Teign
-    { lat: 50.5290, lng: -3.6000 }, // Newton Abbot
-    { lat: 50.5100, lng: -3.6480 }, // Dainton bank
-    { lat: 50.4660, lng: -3.6850 }, // toward Totnes
+    { lat: 50.7265, lng: -3.5370 },
+    { lat: 50.7250, lng: -3.5320 }, // Exeter Central
+    { lat: 50.7273, lng: -3.5165 }, // St James' Park
+    { lat: 50.7310, lng: -3.5060 }, // Polsloe Bridge
+    { lat: 50.7280, lng: -3.4920 },
+    { lat: 50.7180, lng: -3.4790 },
+    { lat: 50.7090, lng: -3.4720 }, // Digby & Sowton
+    { lat: 50.6990, lng: -3.4660 }, // Newcourt
+    { lat: 50.6870, lng: -3.4640 }, // Topsham
+    { lat: 50.6760, lng: -3.4585 }, // estuary east bank
+    { lat: 50.6680, lng: -3.4420 }, // Exton
+    { lat: 50.6580, lng: -3.4400 }, // Lympstone Commando
+    { lat: 50.6470, lng: -3.4360 }, // Lympstone Village
+    { lat: 50.6330, lng: -3.4250 }, // shore curve
+    { lat: 50.6190, lng: -3.4140 }, // Exmouth
+  ],
+  // Main line beyond Newton Abbot: over Dainton bank, Totnes, the South Devon
+  // banks past South Brent/Ivybridge, then Plympton and Laira into Plymouth.
+  "newton-abbot": [
+    ...TRUNK_SW,
+    { lat: 50.5150, lng: -3.6300 }, // Aller
+    { lat: 50.5050, lng: -3.6650 }, // Dainton bank
+    { lat: 50.4830, lng: -3.6900 }, // Stoneycombe
+    { lat: 50.4500, lng: -3.6870 },
     { lat: 50.4255, lng: -3.6888 }, // Totnes
-    { lat: 50.4260, lng: -3.7700 }, // Rattery bank
+    { lat: 50.4230, lng: -3.7350 }, // Rattery climb
+    { lat: 50.4290, lng: -3.7900 }, // Rattery
     { lat: 50.4250, lng: -3.8330 }, // South Brent
+    { lat: 50.4090, lng: -3.8780 }, // Wrangaton
     { lat: 50.3917, lng: -3.9136 }, // Ivybridge
-    { lat: 50.3860, lng: -4.0200 }, // Hemerdon bank
+    { lat: 50.3870, lng: -3.9700 },
+    { lat: 50.3855, lng: -4.0200 }, // Hemerdon bank
     { lat: 50.3860, lng: -4.0660 }, // Plympton
+    { lat: 50.3690, lng: -4.1050 }, // Laira, along the Plym
+    { lat: 50.3720, lng: -4.1300 }, // Lipson curve
     { lat: 50.3779, lng: -4.1426 }, // Plymouth
   ],
   // Torbay branch: south from Newton Abbot through Kingskerswell to the coast.
   paignton: [
-    { lat: 50.7290, lng: -3.5435 }, // Exeter St David's (shared trunk)
-    { lat: 50.7160, lng: -3.5380 },
-    { lat: 50.6850, lng: -3.4990 },
-    { lat: 50.6280, lng: -3.4490 },
-    { lat: 50.6080, lng: -3.4440 },
-    { lat: 50.5810, lng: -3.4660 },
-    { lat: 50.5470, lng: -3.4960 },
-    { lat: 50.5460, lng: -3.5430 },
-    { lat: 50.5290, lng: -3.6000 }, // Newton Abbot — branch leaves here
+    ...TRUNK_SW, // shared trunk — branch leaves at Newton Abbot
+    { lat: 50.5160, lng: -3.5930 }, // Aller Jn, curving south
     { lat: 50.5030, lng: -3.5870 }, // Kingskerswell
+    { lat: 50.4870, lng: -3.5680 }, // Edginswell
     { lat: 50.4719, lng: -3.5402 }, // Torre
     { lat: 50.4540, lng: -3.5436 }, // Torquay
+    { lat: 50.4450, lng: -3.5560 }, // Hollicombe shore
     { lat: 50.4352, lng: -3.5606 }, // Paignton
+  ],
+  // Tarka line: out of Exeter to Cowley Bridge Jn, up the Creedy valley to
+  // Crediton/Yeoford, then north over the watershed and down the Taw valley.
+  barnstaple: [
+    { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
+    { lat: 50.7430, lng: -3.5505 }, // Cowley Bridge Jn
+    { lat: 50.7560, lng: -3.5650 }, // Creedy valley
+    { lat: 50.7690, lng: -3.5760 },
+    { lat: 50.7790, lng: -3.5870 }, // Newton St Cyres
+    { lat: 50.7840, lng: -3.6150 },
+    { lat: 50.7900, lng: -3.6480 }, // Crediton
+    { lat: 50.7870, lng: -3.6800 },
+    { lat: 50.7790, lng: -3.7080 }, // Yeoford
+    { lat: 50.7920, lng: -3.7400 }, // turning north at Coleford Jn
+    { lat: 50.8060, lng: -3.7510 }, // Copplestone
+    { lat: 50.8270, lng: -3.7790 }, // Morchard Road
+    { lat: 50.8580, lng: -3.8030 }, // Lapford
+    { lat: 50.8720, lng: -3.8400 }, // Taw valley
+    { lat: 50.8870, lng: -3.8780 }, // Eggesford
+    { lat: 50.9100, lng: -3.8900 },
+    { lat: 50.9420, lng: -3.9080 }, // Kings Nympton
+    { lat: 50.9700, lng: -3.9400 },
+    { lat: 50.9970, lng: -3.9760 }, // Umberleigh
+    { lat: 51.0300, lng: -4.0100 }, // Chapelton
+    { lat: 51.0550, lng: -4.0500 },
+    { lat: 51.0760, lng: -4.0640 }, // Barnstaple
   ],
   // GWR main line up the Culm valley — the stops alone made it near-straight.
   taunton: [
@@ -136,12 +198,28 @@ const osmGeometry = lineGeometryJson as Record<string, [number, number][]>;
 
 /**
  * Geometry that overrides even the real OSM track. Used for clean schematic
- * branches: the real Dartmoor line loops via Yeoford/Coleford Junction, which
- * looks tangled on the diagram, so we fork it straight off the trunk at
- * Crediton towards Okehampton.
+ * branches: the real Dartmoor line shares rails with the Tarka line through
+ * Yeoford to Coleford Junction, which looks tangled on the diagram — so we
+ * fork it cleanly off the trunk at Crediton and run it just south of Yeoford
+ * through Bow and North Tawton to Okehampton.
  */
 const FORCE_GEOMETRY: Record<string, LatLng[]> = {
-  okehampton: ["EXD", "NTC", "CDF", "SPC", "OKE"].map(stationPos),
+  okehampton: [
+    { lat: 50.7290, lng: -3.5435 }, // Exeter St David's (shared trunk)
+    { lat: 50.7430, lng: -3.5505 }, // Cowley Bridge Jn
+    { lat: 50.7560, lng: -3.5650 },
+    { lat: 50.7690, lng: -3.5760 },
+    { lat: 50.7790, lng: -3.5870 }, // Newton St Cyres
+    { lat: 50.7840, lng: -3.6150 },
+    { lat: 50.7900, lng: -3.6480 }, // Crediton — fork left here
+    { lat: 50.7800, lng: -3.6900 }, // peeling south-west
+    { lat: 50.7740, lng: -3.7300 }, // south of Yeoford
+    { lat: 50.7800, lng: -3.7900 }, // Bow
+    { lat: 50.7860, lng: -3.8600 }, // North Tawton
+    { lat: 50.7740, lng: -3.9100 }, // Sampford Courtenay
+    { lat: 50.7500, lng: -3.9700 },
+    { lat: 50.7340, lng: -4.0000 }, // Okehampton
+  ],
 };
 
 function geometryFor(id: string, stops: string[]): LatLng[] {
