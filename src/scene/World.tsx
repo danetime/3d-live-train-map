@@ -6,6 +6,7 @@ import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { Ground } from "./Ground";
 import { Water } from "./Water";
+import { Buildings } from "./Buildings";
 import { Clouds } from "./Clouds";
 import { RailNetwork } from "./RailNetwork";
 import { Stations } from "./Stations";
@@ -43,8 +44,8 @@ export function World() {
       <fog attach="fog" args={["#9ad0f0", 520, 1400]} />
 
       <Sky sunPosition={[120, 180, 80]} turbidity={4} rayleigh={1.5} />
-      <ambientLight intensity={0.65} />
-      <hemisphereLight args={["#cfe9ff", "#6e9a4f", 0.55]} />
+      <ambientLight intensity={0.6} />
+      <hemisphereLight args={["#cfe9ff", "#6e9a4f", 0.6]} />
       <directionalLight
         color="#fff3df"
         position={[120, 180, 80]}
@@ -57,10 +58,14 @@ export function World() {
         shadow-camera-bottom={-300}
         shadow-camera-far={800}
         shadow-bias={-0.0004}
+        shadow-radius={4}
       />
+      {/* Soft fill from the opposite side so shadowed faces aren't muddy. */}
+      <directionalLight color="#bcd6ff" position={[-110, 70, -90]} intensity={0.35} />
 
       <Ground />
       <Water />
+      <Buildings />
       <Clouds />
       <RailNetwork />
       <Stations />
