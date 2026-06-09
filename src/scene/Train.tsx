@@ -7,6 +7,7 @@ import type { Train as TrainModel } from "../data/types";
 import { LINE_BY_ID } from "../data/network";
 import { lineCurve } from "../data/lineCurves";
 import { project } from "../data/geo";
+import { GAUGE } from "./RailNetwork";
 import { useTrainStore } from "../store/useTrainStore";
 import { trainPositions } from "../sim/trainPositions";
 
@@ -185,6 +186,12 @@ export function Train({ train }: { train: TrainModel }) {
       const t = THREE.MathUtils.clamp(tRef.current, 0.0001, 0.9999);
       curve.getPointAt(t, pos);
       curve.getTangentAt(t, tangent).multiplyScalar(dirRef.current);
+      // On double-track lines, ride the rail for the current direction (so up
+      // and down trains keep to opposite tracks, like the real railway).
+      if (line.doubleTrack) {
+        pos.x += tangent.z * GAUGE;
+        pos.z += -tangent.x * GAUGE;
+      }
       group.position.set(pos.x, RIDE_HEIGHT, pos.z);
       group.rotation.y = Math.atan2(tangent.x, tangent.z);
 

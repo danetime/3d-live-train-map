@@ -28,6 +28,10 @@ export type Line = {
   stops: string[];
   /** Ordered lat/lng points from Exeter outwards, smoothed into a spline. */
   points: LatLng[];
+  /** Main lines are double-track (drawn as parallel up & down rails). */
+  doubleTrack?: boolean;
+  /** Only draw the track from this stop outwards (the rest is shared trunk). */
+  drawFrom?: string;
 };
 
 /** A train currently somewhere on the network. */

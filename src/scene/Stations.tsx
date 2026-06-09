@@ -57,6 +57,12 @@ export function Stations() {
         const height = isHub ? 3.2 : 1.7;
         return (
           <group key={station.code} position={[p.x, 0, p.z]}>
+            {/* Green land base — keeps coastal stations sitting on land, not
+                floating in the estuary/sea. Blends into the ground inland. */}
+            <mesh position={[0, -0.06, 0]} receiveShadow>
+              <boxGeometry args={[size * 2.6, 0.3, size * 2.1]} />
+              <meshStandardMaterial color="#74ad53" flatShading />
+            </mesh>
             {/* Platform slab */}
             <mesh position={[0, 0.18, 0]} receiveShadow>
               <boxGeometry args={[size * 1.7, 0.36, size * 1.1]} />

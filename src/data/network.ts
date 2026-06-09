@@ -100,19 +100,22 @@ const line = (
   destination: string,
   color: string,
   stops: string[],
-): Line => ({ id, name, destination, color, stops, points: geometryFor(id, stops) });
+  opts: { doubleTrack?: boolean; drawFrom?: string } = {},
+): Line => ({ id, name, destination, color, stops, points: geometryFor(id, stops), ...opts });
 
 export const LINES: Line[] = [
   line("exmouth", "Avocet Line", "Exmouth", "#e53e3e",
     ["EXD", "EXC", "POL", "DIG", "TOP", "EXN", "LYM", "EXM"]),
   line("newton-abbot", "Riviera Line", "Newton Abbot", "#3182ce",
-    ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA"]),
+    ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA"], { doubleTrack: true }),
   line("taunton", "Main Line", "Taunton", "#38a169",
-    ["EXD", "TVP", "TAU"]),
+    ["EXD", "TVP", "TAU"], { doubleTrack: true }),
   line("barnstaple", "Tarka Line", "Barnstaple", "#d69e2e",
     ["EXD", "NTC", "CDF", "YEO", "EGG", "KIG", "UMB", "BNP"]),
+  // Shares the trunk out to Yeoford with the Tarka line, then branches at
+  // Coleford Junction — so only draw the track from Yeoford onwards.
   line("okehampton", "Dartmoor Line", "Okehampton", "#805ad5",
-    ["EXD", "NTC", "CDF", "YEO", "SPC", "OKE"]),
+    ["EXD", "NTC", "CDF", "YEO", "SPC", "OKE"], { drawFrom: "YEO" }),
 ];
 
 export const LINE_BY_ID = new Map(LINES.map((l) => [l.id, l]));

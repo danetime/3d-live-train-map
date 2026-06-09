@@ -11,31 +11,35 @@ import { project } from "./geo";
 
 type Poly = LatLng[];
 
+// Coastal edges sit just seaward of the coast stations so they aren't submerged.
 const SEA: Poly = [
-  { lat: 50.616, lng: -3.404 }, // Exmouth seafront
+  { lat: 50.612, lng: -3.4 }, // off Exmouth seafront
   { lat: 50.35, lng: -2.0 }, // far ESE, out past the horizon
   { lat: 49.6, lng: -2.7 }, // far south
   { lat: 49.9, lng: -3.9 }, // far SSW
-  { lat: 50.54, lng: -3.5 }, // Teignmouth coast
-  { lat: 50.578, lng: -3.462 }, // Dawlish
-  { lat: 50.606, lng: -3.44 }, // Dawlish Warren
+  { lat: 50.535, lng: -3.485 }, // off Teignmouth
+  { lat: 50.572, lng: -3.45 }, // off Dawlish
+  { lat: 50.6, lng: -3.428 }, // off Dawlish Warren
 ];
 
+// A funnel down the middle of the estuary, inset from both banks so the
+// east-bank (Avocet) and west-bank (Riviera) stations stay on dry land.
 const EXE_ESTUARY: Poly = [
-  { lat: 50.692, lng: -3.462 }, // Topsham (narrow head)
-  { lat: 50.686, lng: -3.48 }, // Exminster, west bank
-  { lat: 50.64, lng: -3.47 },
-  { lat: 50.61, lng: -3.452 }, // Dawlish Warren side (mouth, west)
-  { lat: 50.616, lng: -3.42 }, // mouth, east
-  { lat: 50.622, lng: -3.416 }, // Exmouth
-  { lat: 50.66, lng: -3.448 }, // east bank
+  { lat: 50.69, lng: -3.47 }, // head, by Topsham
+  { lat: 50.66, lng: -3.462 }, // west bank
+  { lat: 50.632, lng: -3.447 }, // west bank, by Starcross
+  { lat: 50.614, lng: -3.435 }, // west of the mouth
+  { lat: 50.612, lng: -3.422 }, // east of the mouth
+  { lat: 50.64, lng: -3.44 }, // east bank, by Lympstone
+  { lat: 50.668, lng: -3.448 }, // east bank, by Exton
+  { lat: 50.688, lng: -3.466 }, // east bank, by Topsham
 ];
 
 const TEIGN_ESTUARY: Poly = [
-  { lat: 50.553, lng: -3.497 }, // Teignmouth, coast
+  { lat: 50.549, lng: -3.502 }, // off Teignmouth
   { lat: 50.54, lng: -3.585 }, // inland toward Newton Abbot
   { lat: 50.534, lng: -3.587 },
-  { lat: 50.547, lng: -3.499 },
+  { lat: 50.545, lng: -3.504 },
 ];
 
 /** Projected water polygons as flat {x, z} rings. */
