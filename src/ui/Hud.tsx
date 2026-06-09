@@ -10,8 +10,13 @@ export function Hud() {
   const theme = useTrainStore((s) => s.theme);
   const toggleTheme = useTrainStore((s) => s.toggleTheme);
 
+  const selectedSignal = useTrainStore((s) => s.selectedSignal);
+  const selectSignal = useTrainStore((s) => s.selectSignal);
+  const signalAspect = useTrainStore((s) => s.signalAspect);
+
   const selected = trains.find((t) => t.id === selectedId) ?? null;
   const live = dataSource === "live";
+  const signalLine = selectedSignal ? LINE_BY_ID.get(selectedSignal.lineId) : null;
 
   return (
     <>
@@ -95,7 +100,39 @@ export function Hud() {
         </div>
       )}
 
-      <div className="hint">Drag to orbit · scroll / pinch to zoom · tap a train</div>
+      {!selected && selectedSignal && signalLine && (
+        <div className="hud hud-bottom">
+          <div className="panel-head">
+            <span
+              className={`aspect-dot ${signalAspect === "red" ? "red" : "green"}`}
+            />
+            <div>
+              <strong>Signal {selectedSignal.id}</strong>
+              <div className="muted">
+                {signalLine.name} · {selectedSignal.direction === 1 ? "Down" : "Up"} (
+                {selectedSignal.direction === 1
+                  ? `towards ${signalLine.destination}`
+                  : "towards Exeter"}
+                )
+              </div>
+            </div>
+            <button className="close" onClick={() => selectSignal(null)}>
+              ✕
+            </button>
+          </div>
+          <div className="panel-body">
+            Showing{" "}
+            <strong style={{ color: signalAspect === "red" ? "#e53e3e" : "#22a04a" }}>
+              {signalAspect === "red" ? "DANGER (red)" : "CLEAR (green)"}
+            </strong>{" "}
+            · protects the block ahead
+          </div>
+        </div>
+      )}
+
+      <div className="hint">
+        Drag to orbit · right-drag / two-finger drag to pan · tap a train or signal
+      </div>
     </>
   );
 }

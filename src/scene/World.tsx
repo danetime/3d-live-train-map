@@ -15,17 +15,26 @@ import { Trains } from "./Trains";
 import { useTrainStore } from "../store/useTrainStore";
 import { trainPositions } from "../sim/trainPositions";
 
-/** Eases the orbit target toward the selected train so it stays in view. */
+/**
+ * Camera behaviour:
+ * - Nothing selected → hands off: orbit, zoom and PAN freely anywhere.
+ * - Train selected → fly to a top-down view of that train and follow it.
+ */
+const FOLLOW_OFFSET = new THREE.Vector3(0, 52, 9);
+
 function CameraRig({ controls }: { controls: React.RefObject<OrbitControlsImpl> }) {
   const selectedId = useTrainStore((s) => s.selectedId);
-  const home = useRef(new THREE.Vector3(0, 0, 0));
+  const goal = useRef(new THREE.Vector3());
 
-  useFrame(() => {
+  useFrame(({ camera }) => {
     const ctrl = controls.current;
     if (!ctrl) return;
-    const target =
-      (selectedId && trainPositions.get(selectedId)) || home.current;
-    ctrl.target.lerp(target, 0.06);
+    const target = selectedId ? trainPositions.get(selectedId) : null;
+    if (target) {
+      ctrl.target.lerp(target, 0.08);
+      goal.current.copy(target).add(FOLLOW_OFFSET);
+      camera.position.lerp(goal.current, 0.06);
+    }
     ctrl.update();
   });
   return null;
@@ -34,6 +43,7 @@ function CameraRig({ controls }: { controls: React.RefObject<OrbitControlsImpl> 
 export function World() {
   const controls = useRef<OrbitControlsImpl>(null);
   const clearSelection = useTrainStore((s) => s.select);
+  const clearSignal = useTrainStore((s) => s.selectSignal);
   const land = useTrainStore((s) => s.theme) === "land";
 
   const bg = land ? "#9ad0f0" : "#0b1220";
@@ -42,7 +52,10 @@ export function World() {
     <Canvas
       shadows
       camera={{ position: [90, 130, 170], fov: 50, near: 0.1, far: 4000 }}
-      onPointerMissed={() => clearSelection(null)}
+      onPointerMissed={() => {
+        clearSelection(null);
+        clearSignal(null);
+      }}
     >
       <color attach="background" args={[bg]} />
       <fog attach="fog" args={land ? [bg, 520, 1400] : [bg, 900, 2600]} />
@@ -94,8 +107,11 @@ export function World() {
         ref={controls}
         enableDamping
         dampingFactor={0.08}
-        minDistance={20}
-        maxDistance={500}
+        enablePan
+        screenSpacePanning={false}
+        panSpeed={1.1}
+        minDistance={12}
+        maxDistance={600}
         maxPolarAngle={Math.PI / 2.15}
       />
       <CameraRig controls={controls} />

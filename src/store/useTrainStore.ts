@@ -4,6 +4,14 @@ import type { Train } from "../data/types";
 export type DataSource = "sim" | "live";
 export type Theme = "signal" | "land";
 
+export type SelectedSignal = {
+  /** Signal number, e.g. "E218". */
+  id: string;
+  lineId: string;
+  /** +1 = down (away from Exeter), -1 = up (towards Exeter). */
+  direction: 1 | -1;
+};
+
 type TrainStore = {
   trains: Train[];
   selectedId: string | null;
@@ -18,6 +26,12 @@ type TrainStore = {
   /** Update progress for the animation loop without replacing identities. */
   advance: (updates: { id: string; t: number; direction: 1 | -1; headingTo: string }[]) => void;
   select: (id: string | null) => void;
+  /** Currently selected lineside signal (clicking a signal post/lamp). */
+  selectedSignal: SelectedSignal | null;
+  selectSignal: (sig: SelectedSignal | null) => void;
+  /** Live aspect of the selected signal, kept fresh by the Signals layer. */
+  signalAspect: "red" | "green" | null;
+  setSignalAspect: (aspect: "red" | "green" | null) => void;
 };
 
 export const useTrainStore = create<TrainStore>((set) => ({
@@ -38,5 +52,10 @@ export const useTrainStore = create<TrainStore>((set) => ({
         }),
       };
     }),
-  select: (id) => set({ selectedId: id }),
+  select: (id) => set({ selectedId: id, ...(id ? { selectedSignal: null } : {}) }),
+  selectedSignal: null,
+  selectSignal: (sig) =>
+    set({ selectedSignal: sig, signalAspect: null, ...(sig ? { selectedId: null } : {}) }),
+  signalAspect: null,
+  setSignalAspect: (signalAspect) => set({ signalAspect }),
 }));
