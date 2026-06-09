@@ -7,6 +7,8 @@ export function Hud() {
   const selectedId = useTrainStore((s) => s.selectedId);
   const select = useTrainStore((s) => s.select);
   const dataSource = useTrainStore((s) => s.dataSource);
+  const theme = useTrainStore((s) => s.theme);
+  const toggleTheme = useTrainStore((s) => s.toggleTheme);
 
   const selected = trains.find((t) => t.id === selectedId) ?? null;
   const live = dataSource === "live";
@@ -21,6 +23,10 @@ export function Hud() {
         <p className="subtitle">
           3D train map · {live ? "live data" : "simulated data"}
         </p>
+
+        <button className="style-toggle" onClick={toggleTheme}>
+          Style: {theme === "signal" ? "Signal ◐" : "Landscape ◑"}
+        </button>
 
         <div className="legend">
           {LINES.map((line) => (

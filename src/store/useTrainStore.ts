@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Train } from "../data/types";
 
 export type DataSource = "sim" | "live";
+export type Theme = "signal" | "land";
 
 type TrainStore = {
   trains: Train[];
@@ -9,6 +10,9 @@ type TrainStore = {
   /** Whether trains are simulated or coming from the live RTT feed. */
   dataSource: DataSource;
   setDataSource: (source: DataSource) => void;
+  /** Visual style: clean signalling diagram vs low-poly landscape. */
+  theme: Theme;
+  toggleTheme: () => void;
   /** Replace the full set of trains (called by the feed each tick). */
   setTrains: (trains: Train[]) => void;
   /** Update progress for the animation loop without replacing identities. */
@@ -21,6 +25,8 @@ export const useTrainStore = create<TrainStore>((set) => ({
   selectedId: null,
   dataSource: "sim",
   setDataSource: (dataSource) => set({ dataSource }),
+  theme: "signal",
+  toggleTheme: () => set((s) => ({ theme: s.theme === "signal" ? "land" : "signal" })),
   setTrains: (trains) => set({ trains }),
   advance: (updates) =>
     set((state) => {

@@ -33,6 +33,9 @@ function CameraRig({ controls }: { controls: React.RefObject<OrbitControlsImpl> 
 export function World() {
   const controls = useRef<OrbitControlsImpl>(null);
   const clearSelection = useTrainStore((s) => s.select);
+  const land = useTrainStore((s) => s.theme) === "land";
+
+  const bg = land ? "#9ad0f0" : "#0b1220";
 
   return (
     <Canvas
@@ -40,17 +43,17 @@ export function World() {
       camera={{ position: [90, 130, 170], fov: 50, near: 0.1, far: 4000 }}
       onPointerMissed={() => clearSelection(null)}
     >
-      <color attach="background" args={["#9ad0f0"]} />
-      <fog attach="fog" args={["#9ad0f0", 520, 1400]} />
+      <color attach="background" args={[bg]} />
+      <fog attach="fog" args={land ? [bg, 520, 1400] : [bg, 900, 2600]} />
 
-      <Sky sunPosition={[120, 180, 80]} turbidity={4} rayleigh={1.5} />
-      <ambientLight intensity={0.6} />
-      <hemisphereLight args={["#cfe9ff", "#6e9a4f", 0.6]} />
+      {land && <Sky sunPosition={[120, 180, 80]} turbidity={4} rayleigh={1.5} />}
+      <ambientLight intensity={land ? 0.6 : 0.95} />
+      <hemisphereLight args={land ? ["#cfe9ff", "#6e9a4f", 0.6] : ["#3a4a66", "#0b1220", 0.6]} />
       <directionalLight
-        color="#fff3df"
+        color={land ? "#fff3df" : "#dce6ff"}
         position={[120, 180, 80]}
-        intensity={1.7}
-        castShadow
+        intensity={land ? 1.7 : 0.8}
+        castShadow={land}
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-300}
         shadow-camera-right={300}
@@ -63,10 +66,22 @@ export function World() {
       {/* Soft fill from the opposite side so shadowed faces aren't muddy. */}
       <directionalLight color="#bcd6ff" position={[-110, 70, -90]} intensity={0.35} />
 
-      <Ground />
-      <Water />
-      <Buildings />
-      <Clouds />
+      {land ? (
+        <>
+          <Ground />
+          <Water />
+          <Buildings />
+          <Clouds />
+        </>
+      ) : (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
+            <planeGeometry args={[3000, 3000]} />
+            <meshStandardMaterial color="#0e1626" />
+          </mesh>
+          <gridHelper args={[1800, 60, "#27395a", "#16223a"]} position={[0, -0.46, 0]} />
+        </>
+      )}
       <RailNetwork />
       <Stations />
       <Trains />

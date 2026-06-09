@@ -5,7 +5,7 @@ import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
 import type { Train as TrainModel } from "../data/types";
 import { LINE_BY_ID } from "../data/network";
-import { lineCurve } from "../data/lineCurves";
+import { lineCurve, branchOffset } from "../data/lineCurves";
 import { project } from "../data/geo";
 import { GAUGE } from "./RailNetwork";
 import { useTrainStore } from "../store/useTrainStore";
@@ -185,15 +185,17 @@ export function Train({ train }: { train: TrainModel }) {
 
       const t = THREE.MathUtils.clamp(tRef.current, 0.0001, 0.9999);
       curve.getPointAt(t, pos);
-      curve.getTangentAt(t, tangent).multiplyScalar(dirRef.current);
-      // On double-track lines, ride the rail for the current direction (so up
-      // and down trains keep to opposite tracks, like the real railway).
-      if (line.doubleTrack) {
-        pos.x += tangent.z * GAUGE;
-        pos.z += -tangent.x * GAUGE;
+      curve.getTangentAt(t, tangent); // raw tangent
+      const dir = dirRef.current;
+      // Double-track lines: ride the rail for the current direction. Branch
+      // lines: follow the same lateral peel-off as the drawn track.
+      const lat = line.doubleTrack ? GAUGE * dir : branchOffset(line, t);
+      if (lat !== 0) {
+        pos.x += tangent.z * lat;
+        pos.z += -tangent.x * lat;
       }
       group.position.set(pos.x, RIDE_HEIGHT, pos.z);
-      group.rotation.y = Math.atan2(tangent.x, tangent.z);
+      group.rotation.y = Math.atan2(tangent.x * dir, tangent.z * dir);
 
       // Mock trains flip heading at the termini; live trains keep the feed's.
       syncHeading =

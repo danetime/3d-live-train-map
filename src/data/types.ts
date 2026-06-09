@@ -32,6 +32,8 @@ export type Line = {
   doubleTrack?: boolean;
   /** Only draw the track from this stop outwards (the rest is shared trunk). */
   drawFrom?: string;
+  /** Lateral offset (world units) so a branch peels cleanly off a shared trunk. */
+  drawOffset?: number;
 };
 
 /** A train currently somewhere on the network. */

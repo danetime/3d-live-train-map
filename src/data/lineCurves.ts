@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { curveFromPoints, project } from "./geo";
 import { LINES, stationPos } from "./network";
+import type { Line } from "./types";
 
 const cache = new Map<string, THREE.CatmullRomCurve3>();
 /** Arc-length-normalised position (0..1) of each stop along its line. */
@@ -44,6 +45,20 @@ export function lineStopParams(lineId: string): number[] {
   const p = stopParams.get(lineId);
   if (!p) throw new Error(`No stop params for line: ${lineId}`);
   return p;
+}
+
+/**
+ * Lateral offset for a branch line at curve parameter `t`: ramps from 0 at the
+ * branch stop to `drawOffset` shortly after, so the branch peels smoothly off
+ * the shared trunk (used by both the track renderer and the trains).
+ */
+export function branchOffset(line: Line, t: number): number {
+  if (!line.drawOffset || !line.drawFrom) return 0;
+  const idx = line.stops.indexOf(line.drawFrom);
+  if (idx < 0) return 0;
+  const tStart = lineStopParams(line.id)[idx];
+  const f = THREE.MathUtils.clamp((t - tStart) / 0.06, 0, 1);
+  return line.drawOffset * f;
 }
 
 // Pre-sampled points per line, for nearest-line lookups.
