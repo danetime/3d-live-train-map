@@ -19,6 +19,7 @@ export async function startStomp({ username, password, topic, onUpdate }) {
     console.error("[td] 'stompit' is not installed. Run: cd server && npm install");
     return;
   }
+  let messages = 0;
 
   const connectOptions = {
     host: HOST,
@@ -36,9 +37,10 @@ export async function startStomp({ username, password, topic, onUpdate }) {
     stompit.connect(connectOptions, (err, client) => {
       if (err) {
         console.error("[td] connect error:", err.message, "— retrying in 5s");
+        console.error("[td] (check NR_USERNAME/NR_PASSWORD and that your account is activated)");
         return setTimeout(connect, 5000);
       }
-      console.log(`[td] connected; subscribing to /topic/${topic}`);
+      console.log(`[td] connected ✓  subscribing to /topic/${topic}`);
       client.subscribe(
         { destination: `/topic/${topic}`, ack: "auto", "activemq.subscriptionName": username },
         (subErr, message) => {
@@ -48,6 +50,8 @@ export async function startStomp({ username, password, topic, onUpdate }) {
           }
           message.readString("utf-8", (readErr, body) => {
             if (readErr || !body) return;
+            if (messages === 0) console.log("[td] receiving TD messages ✓");
+            messages++;
             for (const update of parseTdFrame(body)) onUpdate(update);
           });
         },

@@ -46,3 +46,12 @@ setInterval(() => {
   state.expire(EXPIRY_MS);
   broadcast({ type: "trains", trains: state.trains() });
 }, 1000);
+
+// Periodic heartbeat so it's obvious data is flowing (live mode only).
+if (live) {
+  setInterval(() => {
+    const n = state.trains().length;
+    const seen = state.seenBerths.size;
+    console.log(`[td] tracking ${n} trains · ${seen} distinct berths seen so far`);
+  }, 20000);
+}
