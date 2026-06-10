@@ -13,13 +13,24 @@ import { startWsServer } from "./lib/wsServer.js";
 import { startReplay } from "./lib/replay.js";
 
 const PORT = Number(process.env.WS_PORT) || 4001;
-const TD_TOPIC = process.env.TD_TOPIC || "TD_SW_SIG_AREA";
+// TD_ALL_SIG_AREA is the only reliable topic — the per-region topics (e.g.
+// TD_SW = Scotland West, not South West!) have unmaintained mappings.
+const TD_TOPIC = process.env.TD_TOPIC || "TD_ALL_SIG_AREA";
+// Only track these signalling areas (Devon): EX = Exeter PSB main, ZY = Exmouth
+// branch, PH = Plymouth. Keeps the all-UK feed down to our patch.
+const AREAS = new Set(
+  (process.env.TD_AREAS || "EX,ZY,PH").split(",").map((s) => s.trim()).filter(Boolean),
+);
 const EXPIRY_MS = 10 * 60 * 1000;
 
 const state = new BerthState();
 const { broadcast } = startWsServer(PORT, () => state.trains());
 
 const live = process.env.NR_USERNAME && process.env.NR_PASSWORD;
+const onUpdate = (u) => {
+  if (AREAS.size && !AREAS.has(u.area)) return; // ignore other regions
+  state.apply(u);
+};
 
 if (live) {
   const { startStomp } = await import("./lib/stompClient.js");
@@ -27,16 +38,18 @@ if (live) {
     username: process.env.NR_USERNAME,
     password: process.env.NR_PASSWORD,
     topic: TD_TOPIC,
-    onUpdate: (u) => state.apply(u),
+    onUpdate,
   });
-  console.log(`[td] LIVE: Network Rail TD (${TD_TOPIC}) → ws://localhost:${PORT}`);
+  console.log(
+    `[td] LIVE: Network Rail TD (${TD_TOPIC}, areas ${[...AREAS].join("/") || "all"}) → ws://localhost:${PORT}`,
+  );
 
   if (process.env.CAPTURE) {
     const { startCapture } = await import("./lib/capture.js");
     startCapture(state);
   }
 } else {
-  startReplay((u) => state.apply(u));
+  startReplay((u) => state.apply(u)); // replay uses its own DEMO area
   console.log(`[td] REPLAY (no NR creds): synthetic demo → ws://localhost:${PORT}`);
   console.log("[td] Add server/.env (see .env.example) and run `npm run live` for real data.");
 }
