@@ -93,6 +93,24 @@ function TrainBody({ color, selected }: { color: string; selected: boolean }) {
   );
 }
 
+/**
+ * Compact glowing marker used in the Signal theme — proportionate to the map
+ * (a detailed loco model would be ~1.5 km long at this scale). Faces +Z.
+ */
+function SignalMarker({ color, selected }: { color: string; selected: boolean }) {
+  return (
+    <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.35, 0]}>
+      <capsuleGeometry args={[0.3, 0.95, 4, 12]} />
+      <meshStandardMaterial
+        color={color}
+        emissive={color}
+        emissiveIntensity={selected ? 1.5 : 0.95}
+        toneMapped={false}
+      />
+    </mesh>
+  );
+}
+
 /** Traksy-style headcode plate that floats above the train and faces the camera. */
 function HeadcodeLabel({ code, selected }: { code: string; selected: boolean }) {
   const width = useMemo(() => code.length * 0.62 + 0.7, [code]);
@@ -132,6 +150,7 @@ export function Train({ train }: { train: TrainModel }) {
   const placed = useRef(false);
 
   const selectedId = useTrainStore((s) => s.selectedId);
+  const signal = useTrainStore((s) => s.theme) === "signal";
   const advance = useTrainStore((s) => s.advance);
   const select = useTrainStore((s) => s.select);
 
@@ -244,7 +263,11 @@ export function Train({ train }: { train: TrainModel }) {
         document.body.style.cursor = "auto";
       }}
     >
-      <TrainBody color={line.color} selected={selected} />
+      {signal ? (
+        <SignalMarker color={line.color} selected={selected} />
+      ) : (
+        <TrainBody color={line.color} selected={selected} />
+      )}
       <HeadcodeLabel code={train.headcode} selected={selected} />
     </group>
   );

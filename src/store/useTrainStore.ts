@@ -49,7 +49,7 @@ export const useTrainStore = create<TrainStore>((set) => ({
   selectedId: null,
   dataSource: "sim",
   setDataSource: (dataSource) => set({ dataSource }),
-  theme: "land",
+  theme: "signal",
   toggleTheme: () => set((s) => ({ theme: s.theme === "signal" ? "land" : "signal" })),
   setTrains: (trains) => set({ trains }),
   advance: (updates) =>
