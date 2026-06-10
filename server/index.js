@@ -27,7 +27,11 @@ const state = new BerthState();
 const { broadcast } = startWsServer(PORT, () => state.trains());
 
 const live = process.env.NR_USERNAME && process.env.NR_PASSWORD;
+// Diagnostic: count every area code seen in the raw feed (before filtering),
+// so we can discover the real codes if our filter matches nothing.
+const seenAreas = new Map();
 const onUpdate = (u) => {
+  seenAreas.set(u.area, (seenAreas.get(u.area) || 0) + 1);
   if (AREAS.size && !AREAS.has(u.area)) return; // ignore other regions
   state.apply(u);
 };
@@ -66,5 +70,13 @@ if (live) {
     const n = state.trains().length;
     const seen = state.seenBerths.size;
     console.log(`[td] tracking ${n} trains · ${seen} distinct berths seen so far`);
+    if (n === 0) {
+      const top = [...seenAreas.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 30)
+        .map(([a, c]) => `${a}:${c}`)
+        .join(" ");
+      console.log(`[td] (no matches) area codes seen in feed: ${top || "none yet"}`);
+    }
   }, 20000);
 }
