@@ -11,6 +11,7 @@ import { Clouds } from "./Clouds";
 import { RailNetwork } from "./RailNetwork";
 import { Signals } from "./Signals";
 import { Stations } from "./Stations";
+import { StationDetail } from "./StationDetail";
 import { Trains } from "./Trains";
 import { useTrainStore } from "../store/useTrainStore";
 import { trainPositions } from "../sim/trainPositions";
@@ -99,8 +100,7 @@ export function World() {
       <RailNetwork />
       <Signals />
       <Stations />
-      {/* StationDetail (Traksy-style platform layout) is parked until live
-          berth data arrives to anchor it — see scene/StationDetail.tsx. */}
+      <StationDetail />
       <Trains />
 
       <OrbitControls
