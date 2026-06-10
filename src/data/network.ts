@@ -268,7 +268,9 @@ export const LINES: Line[] = [
   line("paignton", "Riviera Line", "Paignton", "#14b8a6",
     ["EXD", "EXT", "MRB", "SCS", "DWW", "DWL", "TGM", "NTA", "TRR", "TQY", "PGN"],
     { drawFrom: "NTA" }),
-  line("taunton", "Main Line", "Taunton", "#38a169",
+  // Same blue as the Plymouth direction — it's one main line, Taunton ↔
+  // Exeter ↔ Plymouth, with the other routes branching off it.
+  line("taunton", "Main Line", "Taunton", "#3182ce",
     ["EXD", "TVP", "TAU"], { doubleTrack: true }),
   line("barnstaple", "Tarka Line", "Barnstaple", "#d69e2e",
     ["EXD", "NTC", "CDF", "YEO", "COP", "MRD", "LAP", "EGG", "KIG", "POR", "UMB", "CPN", "BNP"]),
