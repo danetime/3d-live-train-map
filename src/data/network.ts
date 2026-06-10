@@ -204,3 +204,68 @@ export const LINES: Line[] = [
 ];
 
 export const LINE_BY_ID = new Map(LINES.map((l) => [l.id, l]));
+
+/**
+ * Station mileages (decimal miles) per line, aligned 1:1 with each line's
+ * `stops` order — the calibration anchors for precise mileage positioning
+ * (see mileageToT in lineCurves.ts). A berth's miles-and-chains is interpolated
+ * between the two stations it sits between, so we only ever compare mileages
+ * *within* one line — each line keeps its own datum (the main line measures
+ * from Paddington; the Avocet line uses a local datum here).
+ *
+ * NOTE: these are approximate seed values — good enough to prove the engine and
+ * roughly correct in spacing. Replace them with surveyed mileages off the route
+ * diagrams when we have them. 1 mile = 80 chains.
+ */
+const mc = (miles: number, chains: number) => miles + chains / 80;
+
+export const LINE_MILEAGES: Record<string, number[]> = {
+  // Avocet line — local datum from Exeter St David's out to Exmouth (~10¼ mi).
+  exmouth: [
+    mc(0, 0),   // EXD
+    mc(0, 44),  // EXC  Exeter Central
+    mc(1, 24),  // SJP  St James Park
+    mc(1, 72),  // POL  Polsloe Bridge
+    mc(3, 64),  // DIG  Digby & Sowton
+    mc(4, 32),  // NCO  Newcourt
+    mc(5, 24),  // TOP  Topsham
+    mc(6, 64),  // EXN  Exton
+    mc(7, 48),  // LYC  Lympstone Commando
+    mc(8, 32),  // LYM  Lympstone Village
+    mc(10, 20), // EXM  Exmouth
+  ],
+  // Main line SW (Paddington datum), Exeter St David's → Plymouth.
+  "newton-abbot": [
+    mc(173, 56), // EXD
+    mc(174, 32), // EXT  Exeter St Thomas
+    mc(175, 8),  // MRB  Marsh Barton
+    mc(181, 40), // SCS  Starcross
+    mc(184, 24), // DWW  Dawlish Warren
+    mc(185, 64), // DWL  Dawlish
+    mc(188, 24), // TGM  Teignmouth
+    mc(194, 0),  // NTA  Newton Abbot
+    mc(202, 48), // TOT  Totnes
+    mc(215, 0),  // IVY  Ivybridge
+    mc(225, 56), // PLY  Plymouth
+  ],
+  // Torbay branch — shared main-line datum to Newton Abbot, then on to Paignton.
+  paignton: [
+    mc(173, 56), // EXD
+    mc(174, 32), // EXT
+    mc(175, 8),  // MRB
+    mc(181, 40), // SCS
+    mc(184, 24), // DWW
+    mc(185, 64), // DWL
+    mc(188, 24), // TGM
+    mc(194, 0),  // NTA
+    mc(197, 48), // TRR  Torre
+    mc(198, 48), // TQY  Torquay
+    mc(200, 8),  // PGN  Paignton
+  ],
+  // Main line NE (Paddington datum) — mileage decreases toward Taunton.
+  taunton: [
+    mc(173, 56), // EXD
+    mc(159, 16), // TVP  Tiverton Parkway
+    mc(143, 0),  // TAU  Taunton
+  ],
+};

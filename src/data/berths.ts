@@ -13,9 +13,9 @@
  *     (run the server with CAPTURE=1, then map the IDs from
  *     server/data/observed-berths.json onto lines here).
  */
-import { LINES } from "./network";
+import { LINES, LINE_MILEAGES } from "./network";
 import { project } from "./geo";
-import { nearestOnLines } from "./lineCurves";
+import { nearestOnLines, mileageToT } from "./lineCurves";
 import { osGridToLatLng } from "./osgb";
 import generatedBerthCoords from "./berthCoordinates.json";
 import type { LatLng } from "./types";
@@ -36,9 +36,18 @@ const DEMO_K = 10;
 for (const line of LINES) {
   const prefix = DEMO_PREFIX[line.id];
   if (!prefix) continue;
+  // Position the demo berths through the mileage engine: spread them evenly in
+  // *miles* between the line's end stations, then convert to t. This exercises
+  // the precise-positioning path end-to-end and spaces the demo trains by real
+  // geography. Falls back to even t if a line has no mileage data.
+  const miles = LINE_MILEAGES[line.id];
   for (let i = 0; i < DEMO_K; i++) {
+    const f = i / (DEMO_K - 1);
     const id = `${prefix}${String(i + 1).padStart(2, "0")}`;
-    berths.set(key("DEMO", id), { lineId: line.id, t: i / (DEMO_K - 1) });
+    const t = miles
+      ? mileageToT(line.id, miles[0] + (miles[miles.length - 1] - miles[0]) * f)
+      : f;
+    berths.set(key("DEMO", id), { lineId: line.id, t });
   }
 }
 

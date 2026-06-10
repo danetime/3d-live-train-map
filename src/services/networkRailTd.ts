@@ -8,6 +8,7 @@
  */
 import type { Train } from "../data/types";
 import { berthPosition, berthLatLng } from "../data/berths";
+import { berthMileagePosition } from "../data/berthMileages";
 import { LINE_BY_ID } from "../data/network";
 
 const WS_URL = (import.meta.env.VITE_TD_WS_URL as string) || "ws://localhost:4001";
@@ -27,9 +28,11 @@ export function connectTdFeed(
     const out: Train[] = [];
     let unmapped = 0;
     for (const r of raw) {
-      // Prefer exact coordinates if we have them; else the line map.
-      const exact = berthLatLng(r.area, r.berth);
-      const pos = exact ?? berthPosition(r.area, r.berth);
+      // Most precise first: a transcribed mileage (glides between stations);
+      // then exact station coordinates; then the hand/demo line map.
+      const mileage = berthMileagePosition(r.area, r.berth);
+      const exact = mileage ? null : berthLatLng(r.area, r.berth);
+      const pos = mileage ?? exact ?? berthPosition(r.area, r.berth);
       if (!pos) {
         unmapped++;
         continue;

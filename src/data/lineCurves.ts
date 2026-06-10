@@ -1,7 +1,7 @@
 /** Cached spline curves per line, shared by the track renderer and the trains. */
 import * as THREE from "three";
 import { curveFromPoints, project } from "./geo";
-import { LINES, stationPos } from "./network";
+import { LINES, LINE_MILEAGES, stationPos } from "./network";
 import type { Line } from "./types";
 
 const cache = new Map<string, THREE.CatmullRomCurve3>();
@@ -45,6 +45,49 @@ export function lineStopParams(lineId: string): number[] {
   const p = stopParams.get(lineId);
   if (!p) throw new Error(`No stop params for line: ${lineId}`);
   return p;
+}
+
+/** Miles-and-chains → decimal miles (1 mile = 80 chains). */
+export function milesChains(miles: number, chains: number): number {
+  return miles + chains / 80;
+}
+
+// Mileage calibration anchors per line: each station's known mileage paired
+// with its arc-length t, sorted by mileage so we can interpolate t for any
+// mileage in between. Built from LINE_MILEAGES zipped with the stop params.
+const mileageAnchors = new Map<string, { miles: number; t: number }[]>();
+for (const ln of LINES) {
+  const miles = LINE_MILEAGES[ln.id];
+  const ts = stopParams.get(ln.id);
+  if (!miles || !ts || miles.length !== ts.length) continue;
+  const anchors = miles.map((m, i) => ({ miles: m, t: ts[i] }));
+  anchors.sort((a, b) => a.miles - b.miles);
+  mileageAnchors.set(ln.id, anchors);
+}
+
+/**
+ * Convert a real-world mileage (decimal miles — see `milesChains`) to a
+ * parameter t (0..1) along the line's spline, by linearly interpolating between
+ * the calibrated station anchors. Clamps to the line's anchored mileage range,
+ * so a mileage at a station returns exactly that station's t.
+ */
+export function mileageToT(lineId: string, miles: number): number {
+  const anchors = mileageAnchors.get(lineId);
+  if (!anchors || anchors.length === 0) {
+    throw new Error(`No mileage anchors for line: ${lineId}`);
+  }
+  if (miles <= anchors[0].miles) return anchors[0].t;
+  const last = anchors[anchors.length - 1];
+  if (miles >= last.miles) return last.t;
+  for (let i = 1; i < anchors.length; i++) {
+    const a = anchors[i - 1];
+    const b = anchors[i];
+    if (miles <= b.miles) {
+      const f = (miles - a.miles) / (b.miles - a.miles);
+      return a.t + (b.t - a.t) * f;
+    }
+  }
+  return last.t;
 }
 
 /**
