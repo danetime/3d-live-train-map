@@ -42,7 +42,10 @@ export async function startStomp({ username, password, topic, onUpdate }) {
       }
       console.log(`[td] connected ✓  subscribing to /topic/${topic}`);
       client.subscribe(
-        { destination: `/topic/${topic}`, ack: "auto", "activemq.subscriptionName": username },
+        // Subscription name is tied to the topic so changing topic creates a
+        // FRESH durable subscription — otherwise the broker keeps delivering
+        // whatever topic the subscription was first bound to (e.g. TD_SW).
+        { destination: `/topic/${topic}`, ack: "auto", "activemq.subscriptionName": `${username}-${topic}` },
         (subErr, message) => {
           if (subErr) {
             console.error("[td] subscribe error:", subErr.message);
