@@ -23,8 +23,17 @@ import { trainPositions } from "../sim/trainPositions";
  */
 const FOLLOW_OFFSET = new THREE.Vector3(0, 52, 9);
 
+/** Map camera distance-to-target onto a detail level (0 far … 3 close). */
+function levelFor(d: number): number {
+  if (d > 200) return 0;
+  if (d > 95) return 1;
+  if (d > 42) return 2;
+  return 3;
+}
+
 function CameraRig({ controls }: { controls: React.RefObject<OrbitControlsImpl> }) {
   const selectedId = useTrainStore((s) => s.selectedId);
+  const setDetailLevel = useTrainStore((s) => s.setDetailLevel);
   const goal = useRef(new THREE.Vector3());
 
   useFrame(({ camera }) => {
@@ -36,6 +45,7 @@ function CameraRig({ controls }: { controls: React.RefObject<OrbitControlsImpl> 
       goal.current.copy(target).add(FOLLOW_OFFSET);
       camera.position.lerp(goal.current, 0.06);
     }
+    setDetailLevel(levelFor(camera.position.distanceTo(ctrl.target)));
     ctrl.update();
   });
   return null;
@@ -45,6 +55,7 @@ export function World() {
   const controls = useRef<OrbitControlsImpl>(null);
   const clearSelection = useTrainStore((s) => s.select);
   const clearSignal = useTrainStore((s) => s.selectSignal);
+  const detailLevel = useTrainStore((s) => s.detailLevel);
   const land = useTrainStore((s) => s.theme) === "land";
 
   const bg = land ? "#9ad0f0" : "#0b1220";
@@ -98,9 +109,9 @@ export function World() {
         </>
       )}
       <RailNetwork />
-      <Signals />
+      {detailLevel >= 2 && <Signals />}
       <Stations />
-      <StationDetail />
+      {detailLevel >= 3 && <StationDetail />}
       <Trains />
 
       <OrbitControls

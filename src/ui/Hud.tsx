@@ -131,7 +131,7 @@ export function Hud() {
       )}
 
       <div className="hint">
-        Drag to orbit · right-drag / two-finger drag to pan · tap a train or signal
+        Drag to orbit · two-finger / right-drag to pan · zoom in for detail · tap a train or signal
       </div>
     </>
   );

@@ -3,9 +3,17 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
-import { STATIONS } from "../data/network";
+import { STATIONS, LINES } from "../data/network";
 import { project } from "../data/geo";
 import { useTrainStore } from "../store/useTrainStore";
+
+/** Stations shown even in the zoomed-out overview: hub, junctions, termini. */
+const MAJOR = new Set<string>([
+  "EXD", // hub
+  "NTA", // junction (Plymouth / Paignton)
+  "CDF", // junction (Barnstaple / Okehampton)
+  ...LINES.map((l) => l.stops[l.stops.length - 1]), // line termini
+]);
 
 /**
  * A label that keeps a roughly constant on-screen size by scaling with camera
@@ -96,12 +104,16 @@ function SignalStation({ isHub }: { isHub: boolean }) {
 
 export function Stations() {
   const land = useTrainStore((s) => s.theme) === "land";
+  const detailLevel = useTrainStore((s) => s.detailLevel);
   const labelColor = land ? "#1a202c" : "#e8eef7";
   const labelOutline = land ? "#ffffff" : "#0b1220";
 
   return (
     <group>
       {STATIONS.map((station) => {
+        // Zoomed out (level 0) only the major stations show; the rest fade in
+        // from level 1.
+        if (detailLevel < 1 && !MAJOR.has(station.code)) return null;
         const p = project(station.pos);
         const isHub = !!station.hub;
         const size = isHub ? 3.0 : 1.7;

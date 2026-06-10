@@ -32,6 +32,13 @@ type TrainStore = {
   /** Live aspect of the selected signal, kept fresh by the Signals layer. */
   signalAspect: "red" | "green" | null;
   setSignalAspect: (aspect: "red" | "green" | null) => void;
+  /**
+   * Zoom-driven level of detail, set by the camera:
+   * 0 = overview (lines + major stations only), 1 = regional (all stations),
+   * 2 = local (signals appear), 3 = detail (platform layouts).
+   */
+  detailLevel: number;
+  setDetailLevel: (n: number) => void;
 };
 
 export const useTrainStore = create<TrainStore>((set) => ({
@@ -58,4 +65,7 @@ export const useTrainStore = create<TrainStore>((set) => ({
     set({ selectedSignal: sig, signalAspect: null, ...(sig ? { selectedId: null } : {}) }),
   signalAspect: null,
   setSignalAspect: (signalAspect) => set({ signalAspect }),
+  detailLevel: 0,
+  setDetailLevel: (detailLevel) =>
+    set((s) => (s.detailLevel === detailLevel ? s : { detailLevel })),
 }));
