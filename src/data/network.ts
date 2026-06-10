@@ -21,16 +21,21 @@ export const STATIONS: Station[] = [
 
   // Avocet line → Exmouth
   { code: "EXC", name: "Exeter Central", pos: { lat: 50.7250, lng: -3.5320 } },
+  { code: "SJP", name: "St James Park", pos: { lat: 50.7273, lng: -3.5165 } },
   { code: "POL", name: "Polsloe Bridge", pos: { lat: 50.7310, lng: -3.5060 } },
   { code: "DIG", name: "Digby & Sowton", pos: { lat: 50.7090, lng: -3.4720 } },
+  { code: "NCO", name: "Newcourt", pos: { lat: 50.6990, lng: -3.4660 } },
   { code: "TOP", name: "Topsham", pos: { lat: 50.6870, lng: -3.4640 } },
   { code: "EXN", name: "Exton", pos: { lat: 50.6680, lng: -3.4420 } },
+  { code: "LYC", name: "Lympstone Commando", pos: { lat: 50.6580, lng: -3.4400 } },
   { code: "LYM", name: "Lympstone Village", pos: { lat: 50.6470, lng: -3.4360 } },
   { code: "EXM", name: "Exmouth", pos: { lat: 50.6190, lng: -3.4140 } },
 
   // Riviera line → Newton Abbot (via the Dawlish sea wall)
   { code: "EXT", name: "Exeter St Thomas", pos: { lat: 50.7160, lng: -3.5380 } },
+  { code: "MRB", name: "Marsh Barton", pos: { lat: 50.7060, lng: -3.5260 } },
   { code: "SCS", name: "Starcross", pos: { lat: 50.6280, lng: -3.4490 } },
+  { code: "DWW", name: "Dawlish Warren", pos: { lat: 50.5990, lng: -3.4430 } },
   { code: "DWL", name: "Dawlish", pos: { lat: 50.5810, lng: -3.4660 } },
   { code: "TGM", name: "Teignmouth", pos: { lat: 50.5470, lng: -3.4960 } },
   { code: "NTA", name: "Newton Abbot", pos: { lat: 50.5290, lng: -3.6000 } },
@@ -53,9 +58,14 @@ export const STATIONS: Station[] = [
   { code: "NTC", name: "Newton St Cyres", pos: { lat: 50.7790, lng: -3.5870 } },
   { code: "CDF", name: "Crediton", pos: { lat: 50.7900, lng: -3.6480 } },
   { code: "YEO", name: "Yeoford", pos: { lat: 50.7790, lng: -3.7080 } },
+  { code: "COP", name: "Copplestone", pos: { lat: 50.8060, lng: -3.7510 } },
+  { code: "MRD", name: "Morchard Road", pos: { lat: 50.8270, lng: -3.7790 } },
+  { code: "LAP", name: "Lapford", pos: { lat: 50.8580, lng: -3.8030 } },
   { code: "EGG", name: "Eggesford", pos: { lat: 50.8870, lng: -3.8780 } },
   { code: "KIG", name: "Kings Nympton", pos: { lat: 50.9420, lng: -3.9080 } },
+  { code: "POR", name: "Portsmouth Arms", pos: { lat: 50.9650, lng: -3.9400 } },
   { code: "UMB", name: "Umberleigh", pos: { lat: 50.9970, lng: -3.9760 } },
+  { code: "CPN", name: "Chapelton", pos: { lat: 51.0300, lng: -4.0100 } },
   { code: "BNP", name: "Barnstaple", pos: { lat: 51.0760, lng: -4.0640 } },
 
   // Dartmoor line → Okehampton (branches off the Tarka line at Coleford Jn)
@@ -172,7 +182,7 @@ const HAND_GEOMETRY: Record<string, LatLng[]> = {
     { lat: 50.8870, lng: -3.8780 }, // Eggesford
     { lat: 50.9100, lng: -3.8900 },
     { lat: 50.9420, lng: -3.9080 }, // Kings Nympton
-    { lat: 50.9700, lng: -3.9400 },
+    { lat: 50.9650, lng: -3.9398 }, // Portsmouth Arms
     { lat: 50.9970, lng: -3.9760 }, // Umberleigh
     { lat: 51.0300, lng: -4.0100 }, // Chapelton
     { lat: 51.0550, lng: -4.0500 },
@@ -251,15 +261,17 @@ const line = (
 
 export const LINES: Line[] = [
   line("exmouth", "Avocet Line", "Exmouth", "#e53e3e",
-    ["EXD", "EXC", "POL", "DIG", "TOP", "EXN", "LYM", "EXM"]),
+    ["EXD", "EXC", "SJP", "POL", "DIG", "NCO", "TOP", "EXN", "LYC", "LYM", "EXM"]),
   line("newton-abbot", "Main Line", "Plymouth", "#3182ce",
-    ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA", "TOT", "IVY", "PLY"], { doubleTrack: true }),
+    ["EXD", "EXT", "MRB", "SCS", "DWW", "DWL", "TGM", "NTA", "TOT", "IVY", "PLY"],
+    { doubleTrack: true }),
   line("paignton", "Riviera Line", "Paignton", "#14b8a6",
-    ["EXD", "EXT", "SCS", "DWL", "TGM", "NTA", "TRR", "TQY", "PGN"], { drawFrom: "NTA" }),
+    ["EXD", "EXT", "MRB", "SCS", "DWW", "DWL", "TGM", "NTA", "TRR", "TQY", "PGN"],
+    { drawFrom: "NTA" }),
   line("taunton", "Main Line", "Taunton", "#38a169",
     ["EXD", "TVP", "TAU"], { doubleTrack: true }),
   line("barnstaple", "Tarka Line", "Barnstaple", "#d69e2e",
-    ["EXD", "NTC", "CDF", "YEO", "EGG", "KIG", "UMB", "BNP"]),
+    ["EXD", "NTC", "CDF", "YEO", "COP", "MRD", "LAP", "EGG", "KIG", "POR", "UMB", "CPN", "BNP"]),
   // Shares the trunk with the Tarka line out to Crediton, then forks straight
   // off towards Okehampton (Tarka carries on to Barnstaple). Schematic fork —
   // see FORCE_GEOMETRY.
