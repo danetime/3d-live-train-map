@@ -53,24 +53,6 @@ export const STATIONS: Station[] = [
   // Main line NE → Taunton
   { code: "TVP", name: "Tiverton Parkway", pos: { lat: 50.9170, lng: -3.3640 } },
   { code: "TAU", name: "Taunton", pos: { lat: 51.0250, lng: -3.1015 } },
-
-  // Tarka line → Barnstaple
-  { code: "NTC", name: "Newton St Cyres", pos: { lat: 50.7790, lng: -3.5870 } },
-  { code: "CDF", name: "Crediton", pos: { lat: 50.7900, lng: -3.6480 } },
-  { code: "YEO", name: "Yeoford", pos: { lat: 50.7790, lng: -3.7080 } },
-  { code: "COP", name: "Copplestone", pos: { lat: 50.8060, lng: -3.7510 } },
-  { code: "MRD", name: "Morchard Road", pos: { lat: 50.8270, lng: -3.7790 } },
-  { code: "LAP", name: "Lapford", pos: { lat: 50.8580, lng: -3.8030 } },
-  { code: "EGG", name: "Eggesford", pos: { lat: 50.8870, lng: -3.8780 } },
-  { code: "KIG", name: "Kings Nympton", pos: { lat: 50.9420, lng: -3.9080 } },
-  { code: "POR", name: "Portsmouth Arms", pos: { lat: 50.9650, lng: -3.9400 } },
-  { code: "UMB", name: "Umberleigh", pos: { lat: 50.9970, lng: -3.9760 } },
-  { code: "CPN", name: "Chapelton", pos: { lat: 51.0300, lng: -4.0100 } },
-  { code: "BNP", name: "Barnstaple", pos: { lat: 51.0760, lng: -4.0640 } },
-
-  // Dartmoor line → Okehampton (branches off the Tarka line at Coleford Jn)
-  { code: "SPC", name: "Sampford Courtenay", pos: { lat: 50.7740, lng: -3.9100 } },
-  { code: "OKE", name: "Okehampton", pos: { lat: 50.7340, lng: -4.0000 } },
 ];
 
 const STATION_BY_CODE = new Map(STATIONS.map((s) => [s.code, s]));
@@ -162,32 +144,6 @@ const HAND_GEOMETRY: Record<string, LatLng[]> = {
     { lat: 50.4450, lng: -3.5560 }, // Hollicombe shore
     { lat: 50.4352, lng: -3.5606 }, // Paignton
   ],
-  // Tarka line: out of Exeter to Cowley Bridge Jn, up the Creedy valley to
-  // Crediton/Yeoford, then north over the watershed and down the Taw valley.
-  barnstaple: [
-    { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
-    { lat: 50.7430, lng: -3.5505 }, // Cowley Bridge Jn
-    { lat: 50.7560, lng: -3.5650 }, // Creedy valley
-    { lat: 50.7690, lng: -3.5760 },
-    { lat: 50.7790, lng: -3.5870 }, // Newton St Cyres
-    { lat: 50.7840, lng: -3.6150 },
-    { lat: 50.7900, lng: -3.6480 }, // Crediton
-    { lat: 50.7870, lng: -3.6800 },
-    { lat: 50.7790, lng: -3.7080 }, // Yeoford
-    { lat: 50.7920, lng: -3.7400 }, // turning north at Coleford Jn
-    { lat: 50.8060, lng: -3.7510 }, // Copplestone
-    { lat: 50.8270, lng: -3.7790 }, // Morchard Road
-    { lat: 50.8580, lng: -3.8030 }, // Lapford
-    { lat: 50.8720, lng: -3.8400 }, // Taw valley
-    { lat: 50.8870, lng: -3.8780 }, // Eggesford
-    { lat: 50.9100, lng: -3.8900 },
-    { lat: 50.9420, lng: -3.9080 }, // Kings Nympton
-    { lat: 50.9650, lng: -3.9398 }, // Portsmouth Arms
-    { lat: 50.9970, lng: -3.9760 }, // Umberleigh
-    { lat: 51.0300, lng: -4.0100 }, // Chapelton
-    { lat: 51.0550, lng: -4.0500 },
-    { lat: 51.0760, lng: -4.0640 }, // Barnstaple
-  ],
   // GWR main line up the Culm valley — the stops alone made it near-straight.
   taunton: [
     { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
@@ -206,37 +162,10 @@ const HAND_GEOMETRY: Record<string, LatLng[]> = {
 
 const osmGeometry = lineGeometryJson as Record<string, [number, number][]>;
 
-/**
- * Geometry that overrides even the real OSM track. Used for clean schematic
- * branches: the real Dartmoor line shares rails with the Tarka line through
- * Yeoford to Coleford Junction, which looks tangled on the diagram — so we
- * fork it cleanly off the trunk at Crediton and run it just south of Yeoford
- * through Bow and North Tawton to Okehampton.
- */
-const FORCE_GEOMETRY: Record<string, LatLng[]> = {
-  okehampton: [
-    { lat: 50.7290, lng: -3.5435 }, // Exeter St David's (shared trunk)
-    { lat: 50.7430, lng: -3.5505 }, // Cowley Bridge Jn
-    { lat: 50.7560, lng: -3.5650 },
-    { lat: 50.7690, lng: -3.5760 },
-    { lat: 50.7790, lng: -3.5870 }, // Newton St Cyres
-    { lat: 50.7840, lng: -3.6150 },
-    { lat: 50.7900, lng: -3.6480 }, // Crediton — fork left here
-    { lat: 50.7800, lng: -3.6900 }, // peeling south-west
-    { lat: 50.7740, lng: -3.7300 }, // south of Yeoford
-    { lat: 50.7800, lng: -3.7900 }, // Bow
-    { lat: 50.7860, lng: -3.8600 }, // North Tawton
-    { lat: 50.7740, lng: -3.9100 }, // Sampford Courtenay
-    { lat: 50.7500, lng: -3.9700 },
-    { lat: 50.7340, lng: -4.0000 }, // Okehampton
-  ],
-};
-
 function geometryFor(id: string, stops: string[]): LatLng[] {
   // Verified, baked geometry is the source of truth — reliable and independent
   // of the (flaky) OSM fetch. OSM is only a fallback for any line we haven't
   // hand-traced, and only if it actually reaches that line's terminus.
-  if (FORCE_GEOMETRY[id]) return FORCE_GEOMETRY[id];
   if (HAND_GEOMETRY[id]) return HAND_GEOMETRY[id];
   const osm = osmGeometry[id];
   if (osm && osm.length > 1) {
@@ -272,13 +201,6 @@ export const LINES: Line[] = [
   // Exeter ↔ Plymouth, with the other routes branching off it.
   line("taunton", "Main Line", "Taunton", "#3182ce",
     ["EXD", "TVP", "TAU"], { doubleTrack: true }),
-  line("barnstaple", "Tarka Line", "Barnstaple", "#d69e2e",
-    ["EXD", "NTC", "CDF", "YEO", "COP", "MRD", "LAP", "EGG", "KIG", "POR", "UMB", "CPN", "BNP"]),
-  // Shares the trunk with the Tarka line out to Crediton, then forks straight
-  // off towards Okehampton (Tarka carries on to Barnstaple). Schematic fork —
-  // see FORCE_GEOMETRY.
-  line("okehampton", "Dartmoor Line", "Okehampton", "#805ad5",
-    ["EXD", "NTC", "CDF", "YEO", "SPC", "OKE"], { drawFrom: "CDF" }),
 ];
 
 export const LINE_BY_ID = new Map(LINES.map((l) => [l.id, l]));

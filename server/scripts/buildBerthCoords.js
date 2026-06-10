@@ -216,7 +216,30 @@ async function main() {
   console.log(
     `[coords] berths with a STANOX: ${smart.size}  ·  resolved to coordinates: ${out.length}  ·  unresolved: ${unresolved}`,
   );
-  for (const r of out.slice(0, 10)) console.log(`  ${r.area}:${r.berth} → ${r.lat}, ${r.lng}`);
+
+  // Per-area resolved counts — shows which signalling areas we cover.
+  const perArea = {};
+  for (const r of out) perArea[r.area] = (perArea[r.area] || 0) + 1;
+  const top = Object.entries(perArea).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  console.log("[coords] resolved by area:", top.map(([a, n]) => `${a}:${n}`).join("  "));
+
+  // Cross-check against captured live berths, if present — this tells us how
+  // many of the trains actually running right now we can place on the map.
+  const obsPath = join(DATA, "observed-berths.json");
+  if (existsSync(obsPath)) {
+    try {
+      const obs = JSON.parse(readFileSync(obsPath, "utf8"));
+      const have = new Set(out.map((r) => `${r.area}:${r.berth}`));
+      const hit = obs.filter((o) => have.has(`${o.area}:${o.berth}`)).length;
+      console.log(
+        `[coords] captured live berths placed: ${hit} / ${obs.length}  (the rest need positions)`,
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  for (const r of out.slice(0, 8)) console.log(`  ${r.area}:${r.berth} → ${r.lat}, ${r.lng}`);
   console.log(`[coords] wrote ${outPath}`);
 }
 

@@ -49,17 +49,6 @@ const DATA: Record<string, RealSig[]> = {
     { id: "UT219", near: "TQY", dir: -1, nudge: -0.02 },
     { id: "DT220", near: "TQY", dir: 1, nudge: 0.0 },
   ],
-  // Tarka line — Crediton signal box (drawing 24-2).
-  barnstaple: [
-    { id: "CN4", near: "CDF", dir: -1, nudge: -0.02 },
-    { id: "CN2", near: "CDF", dir: 1, nudge: -0.02 },
-    { id: "CN2R", near: "CDF", dir: 1, nudge: -0.01 },
-    { id: "CN13", near: "CDF", dir: 1, nudge: 0.01 },
-    { id: "CN15", near: "CDF", dir: 1, nudge: 0.02 },
-    { id: "CN5", near: "CDF", dir: -1, nudge: 0.01 },
-  ],
-  // Dartmoor line — shares Crediton box; CN14 toward the Okehampton branch.
-  okehampton: [{ id: "CN14", near: "CDF", dir: 1, nudge: 0.02 }],
   // Avocet line — Exeter Central & Exmouth Junction (drawings 24-20/24-21).
   exmouth: [
     { id: "E731", near: "EXC", dir: 1, nudge: -0.02 },

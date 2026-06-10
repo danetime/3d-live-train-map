@@ -13,8 +13,6 @@ const LINES = [
   ["newton-abbot", "NAB"],
   ["paignton", "PAI"],
   ["taunton", "TAU"],
-  ["barnstaple", "BNP"],
-  ["okehampton", "OKE"],
 ];
 const K = 10;
 const STEP_MS = 2500;

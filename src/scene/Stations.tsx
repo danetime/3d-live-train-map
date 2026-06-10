@@ -11,7 +11,6 @@ import { useTrainStore } from "../store/useTrainStore";
 const MAJOR = new Set<string>([
   "EXD", // hub
   "NTA", // junction (Plymouth / Paignton)
-  "CDF", // junction (Barnstaple / Okehampton)
   ...LINES.map((l) => l.stops[l.stops.length - 1]), // line termini
 ]);
 

@@ -31,8 +31,6 @@ const DEMO_PREFIX: Record<string, string> = {
   "newton-abbot": "NAB",
   paignton: "PAI",
   taunton: "TAU",
-  barnstaple: "BNP",
-  okehampton: "OKE",
 };
 const DEMO_K = 10;
 for (const line of LINES) {
