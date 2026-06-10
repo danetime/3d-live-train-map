@@ -48,11 +48,14 @@ export function useTrainFeed(source: FeedSource = "mock") {
     if (source === "network-rail-td") {
       let gotData = false;
       const disconnect = connectTdFeed(
-        (trains) => {
+        (trains, rawCount) => {
           if (cancelled) return;
           gotData = true;
-          setDataSource(trains.length > 0 ? "live" : "sim");
-          if (trains.length > 0) setTrains(trains);
+          // Connected to the live feed: show LIVE even if no trains map to the
+          // network yet (rawCount > 0 means real data is flowing).
+          useTrainStore.getState().setFeedCount(rawCount);
+          setDataSource(rawCount > 0 ? "live" : "sim");
+          setTrains(trains);
         },
         () => {
           if (!gotData) {

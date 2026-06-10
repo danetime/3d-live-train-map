@@ -16,7 +16,7 @@ type RawTrain = { headcode: string; area: string; berth: string };
 
 /** Connect to the bridge. Returns a disconnect function. */
 export function connectTdFeed(
-  onTrains: (trains: Train[]) => void,
+  onTrains: (trains: Train[], rawCount: number) => void,
   onError: () => void,
 ): () => void {
   let ws: WebSocket | null = null;
@@ -64,7 +64,10 @@ export function connectTdFeed(
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data);
-        if (msg?.type === "trains") onTrains(toTrains(msg.trains ?? []));
+        if (msg?.type === "trains") {
+          const raw: RawTrain[] = msg.trains ?? [];
+          onTrains(toTrains(raw), raw.length);
+        }
       } catch {
         /* ignore malformed frame */
       }

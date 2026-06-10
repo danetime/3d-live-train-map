@@ -7,6 +7,7 @@ export function Hud() {
   const selectedId = useTrainStore((s) => s.selectedId);
   const select = useTrainStore((s) => s.select);
   const dataSource = useTrainStore((s) => s.dataSource);
+  const feedCount = useTrainStore((s) => s.feedCount);
   const theme = useTrainStore((s) => s.theme);
   const toggleTheme = useTrainStore((s) => s.toggleTheme);
 
@@ -26,7 +27,9 @@ export function Hud() {
           <span className={`badge ${live ? "live" : "sim"}`}>{live ? "LIVE" : "SIM"}</span>
         </h1>
         <p className="subtitle">
-          3D train map · {live ? "live data" : "simulated data"}
+          {live
+            ? `live feed · ${feedCount} trains running · ${trains.length} placed on the map`
+            : "3D train map · simulated data"}
         </p>
 
         <button className="style-toggle" onClick={toggleTheme}>

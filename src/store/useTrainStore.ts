@@ -39,6 +39,9 @@ type TrainStore = {
    */
   detailLevel: number;
   setDetailLevel: (n: number) => void;
+  /** Raw number of trains coming from the live TD feed (before map matching). */
+  feedCount: number;
+  setFeedCount: (n: number) => void;
 };
 
 export const useTrainStore = create<TrainStore>((set) => ({
@@ -68,4 +71,6 @@ export const useTrainStore = create<TrainStore>((set) => ({
   detailLevel: 0,
   setDetailLevel: (detailLevel) =>
     set((s) => (s.detailLevel === detailLevel ? s : { detailLevel })),
+  feedCount: 0,
+  setFeedCount: (feedCount) => set((s) => (s.feedCount === feedCount ? s : { feedCount })),
 }));
