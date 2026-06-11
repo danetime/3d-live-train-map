@@ -1,5 +1,5 @@
 /** Stations: low-poly buildings in 'land' mode, clean glowing nodes in 'signal'. */
-import { useMemo, useRef } from "react";
+import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -15,31 +15,32 @@ const MAJOR = new Set<string>([
 ]);
 
 /**
- * A label that keeps a roughly constant on-screen size by scaling with camera
- * distance — so it stays readable far out and doesn't balloon when zoomed in.
+ * A label that keeps a roughly constant on-screen size. Under the orthographic
+ * camera, screen size = world size × zoom, so we scale inversely with zoom
+ * (camera distance is a useless constant for ortho). fontSize is 1 world unit,
+ * so `px` is roughly the target height in screen pixels.
  */
 function ScaledLabel({
   text,
   y,
-  k,
+  px,
   bold,
   color,
   outline,
 }: {
   text: string;
   y: number;
-  k: number;
+  px: number;
   bold?: boolean;
   color: string;
   outline: string;
 }) {
   const ref = useRef<THREE.Group>(null);
-  const world = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera }) => {
     const g = ref.current;
     if (!g) return;
-    const d = camera.position.distanceTo(g.getWorldPosition(world));
-    g.scale.setScalar(THREE.MathUtils.clamp(d * k, 0.6, 6));
+    const zoom = (camera as THREE.OrthographicCamera).zoom || 1;
+    g.scale.setScalar(THREE.MathUtils.clamp(px / zoom, 0.4, 40));
   });
   return (
     <group ref={ref} position={[0, y, 0]}>
@@ -111,6 +112,7 @@ export function Stations() {
         if (detailLevel < 1 && !MAJOR.has(station.code)) return null;
         const p = project(station.pos);
         const isHub = !!station.hub;
+        const isMajor = MAJOR.has(station.code);
         const size = isHub ? 3.0 : 1.7;
         const height = isHub ? 3.2 : 1.7;
         return (
@@ -123,14 +125,18 @@ export function Stations() {
               ) : (
                 <SignalStation isHub={isHub} />
               ))}
-            <ScaledLabel
-              text={isHub ? "Exeter St David's" : station.name}
-              y={(land ? height : 2.4) + (isHub ? 2.4 : 1.6)}
-              k={isHub ? 0.016 : 0.011}
-              bold={isHub}
-              color={labelColor}
-              outline={labelOutline}
-            />
+            {/* Labels declutter by zoom: major stations always, the rest only
+                once you've zoomed in (level 2+). */}
+            {(isMajor || detailLevel >= 2) && (
+              <ScaledLabel
+                text={isHub ? "Exeter St David's" : station.name}
+                y={(land ? height : 2.4) + (isHub ? 2.4 : 1.6)}
+                px={isHub ? 26 : 14}
+                bold={isHub}
+                color={labelColor}
+                outline={labelOutline}
+              />
+            )}
           </group>
         );
       })}
