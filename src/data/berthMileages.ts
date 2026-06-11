@@ -24,7 +24,11 @@
 import { mileageToT, milesChains } from "./lineCurves";
 import type { BerthPos } from "./berths";
 
-export type BerthMileage = { line: string; miles: number; chains: number };
+/** `dir`: travel direction this berth serves, where known (SMART splits berth
+ *  steps into down/up): 1 = increasing t along the line, -1 = decreasing. On
+ *  "newton-abbot" (mileage rises toward Plymouth) down = 1, up = -1. Generated
+ *  rows from server/scripts/extractMainLineBerths.js include it. */
+export type BerthMileage = { line: string; miles: number; chains: number; dir?: 1 | -1 };
 
 export const BERTH_MILEAGES: Record<string, BerthMileage> = {
   // Out on the Dawlish sea wall, between Dawlish (185m 64ch) and Teignmouth
@@ -38,5 +42,5 @@ export const BERTH_MILEAGES: Record<string, BerthMileage> = {
 export function berthMileagePosition(area: string, berth: string): BerthPos | null {
   const m = BERTH_MILEAGES[`${area}:${berth}`];
   if (!m) return null;
-  return { lineId: m.line, t: mileageToT(m.line, milesChains(m.miles, m.chains)) };
+  return { lineId: m.line, t: mileageToT(m.line, milesChains(m.miles, m.chains)), dir: m.dir };
 }

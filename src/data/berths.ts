@@ -20,7 +20,10 @@ import { osGridToLatLng } from "./osgb";
 import generatedBerthCoords from "./berthCoordinates.json";
 import type { LatLng } from "./types";
 
-export type BerthPos = { lineId: string; t: number };
+/** `dir` is the known travel direction at this berth, where the source data
+ *  records it (SMART splits berth steps into down/up): 1 = increasing t,
+ *  -1 = decreasing. Optional — berths without it keep inferred direction. */
+export type BerthPos = { lineId: string; t: number; dir?: 1 | -1 };
 
 const berths = new Map<string, BerthPos>();
 const key = (area: string, berth: string) => `${area}:${berth}`;

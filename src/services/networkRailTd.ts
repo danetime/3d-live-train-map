@@ -40,7 +40,11 @@ export function connectTdFeed(
       }
       const id = `${r.area}:${r.headcode}`;
       const prev = lastT.get(id);
-      const direction: 1 | -1 = prev == null ? 1 : pos.t >= prev ? 1 : -1;
+      // Prefer the berth's known direction (down/up from SMART) — it's exact
+      // and puts the train on the correct rail of a double-track line. Only
+      // infer from movement when the berth doesn't carry one.
+      const direction: 1 | -1 =
+        (mileage?.dir ?? pos.dir) ?? (prev == null ? 1 : pos.t >= prev ? 1 : -1);
       lastT.set(id, pos.t);
       const line = LINE_BY_ID.get(pos.lineId);
       out.push({

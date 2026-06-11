@@ -9,7 +9,9 @@
     "live": "node --env-file=.env index.js",
     "capture": "CAPTURE=1 node --env-file=.env index.js",
     "build:coords": "node --env-file=.env scripts/buildBerthCoords.js",
-    "build:coords:sample": "node scripts/buildBerthCoords.js --sample"
+    "build:coords:sample": "node scripts/buildBerthCoords.js --sample",
+    "berths:mainline": "node --env-file=.env scripts/extractMainLineBerths.js",
+    "berths:mainline:sample": "node scripts/extractMainLineBerths.js --sample --direction up --chain CDF,EXD"
   },
   "dependencies": {
     "stompit": "^1.0.0",
