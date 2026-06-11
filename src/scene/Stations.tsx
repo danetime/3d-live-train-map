@@ -90,19 +90,27 @@ function LandStation({ size, height, isHub }: { size: number; height: number; is
  * trains. The old glowing sphere-on-stem is parked until the design pass.
  */
 function SignalStation({ isHub }: { isHub: boolean }) {
+  const r = isHub ? 1.8 : 1.1;
+  // A schematic node that reads on the light board: dark disc, pale centre.
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
-      <circleGeometry args={[isHub ? 1.8 : 1.1, 24]} />
-      <meshBasicMaterial color="#ffffff" />
-    </mesh>
+    <group position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh>
+        <circleGeometry args={[r, 24]} />
+        <meshBasicMaterial color="#2b3340" />
+      </mesh>
+      <mesh position={[0, 0, 0.01]}>
+        <circleGeometry args={[r * 0.5, 20]} />
+        <meshBasicMaterial color="#f3eee2" />
+      </mesh>
+    </group>
   );
 }
 
 export function Stations() {
   const land = useTrainStore((s) => s.theme) === "land";
   const detailLevel = useTrainStore((s) => s.detailLevel);
-  const labelColor = land ? "#1a202c" : "#e8eef7";
-  const labelOutline = land ? "#ffffff" : "#0b1220";
+  const labelColor = land ? "#1a202c" : "#26303c";
+  const labelOutline = land ? "#ffffff" : "#efe9db";
 
   return (
     <group>

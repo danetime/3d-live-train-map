@@ -106,7 +106,7 @@ export function World() {
   const detailLevel = useTrainStore((s) => s.detailLevel);
   const land = useTrainStore((s) => s.theme) === "land";
 
-  const bg = land ? "#9ad0f0" : "#0b1220";
+  const bg = land ? "#9ad0f0" : "#e7e1d3";
 
   return (
     <Canvas
@@ -123,8 +123,8 @@ export function World() {
           same camera distance, so distance fog would just tint the scene flatly. */}
 
       {land && <Sky sunPosition={[120, 180, 80]} turbidity={4} rayleigh={1.5} />}
-      <ambientLight intensity={land ? 0.6 : 0.95} />
-      <hemisphereLight args={land ? ["#cfe9ff", "#6e9a4f", 0.6] : ["#3a4a66", "#0b1220", 0.6]} />
+      <ambientLight intensity={land ? 0.6 : 0.85} />
+      <hemisphereLight args={land ? ["#cfe9ff", "#6e9a4f", 0.6] : ["#fffaf0", "#d8d0bf", 0.7]} />
       <directionalLight
         color={land ? "#fff3df" : "#dce6ff"}
         position={[120, 180, 80]}
@@ -151,11 +151,12 @@ export function World() {
         </>
       ) : (
         <>
+          {/* Clean warm "board" the schematic sits on. */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
             <planeGeometry args={[3000, 3000]} />
-            <meshStandardMaterial color="#0e1626" />
+            <meshStandardMaterial color="#ddd5c4" />
           </mesh>
-          <gridHelper args={[1800, 60, "#27395a", "#16223a"]} position={[0, -0.46, 0]} />
+          <gridHelper args={[1800, 60, "#cfc7b4", "#d7cfbd"]} position={[0, -0.46, 0]} />
         </>
       )}
       <RailNetwork />
