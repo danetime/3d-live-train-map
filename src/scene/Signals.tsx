@@ -21,7 +21,7 @@ import { realSignalsFor } from "../data/realSignals";
 import { useTrainStore } from "../store/useTrainStore";
 import { GAUGE } from "./RailNetwork";
 
-const SPACING = 12; // world units between signals (per direction)
+const SPACING = 7; // world units between signals (per direction)
 const RED = new THREE.Color("#ff3b30");
 const GREEN = new THREE.Color("#22c55e");
 
@@ -85,13 +85,13 @@ export function Signals() {
           const x = p.x + tan.z * lateral;
           const z = p.z - tan.x * lateral;
 
-          o.position.set(x, 0.45, z);
+          o.position.set(x, 0.7, z);
           o.rotation.set(0, 0, 0);
           o.scale.set(1, 1, 1);
           o.updateMatrix();
           postMatrices.push(o.matrix.clone());
 
-          o.position.set(x, 1.0, z);
+          o.position.set(x, 1.55, z);
           o.updateMatrix();
           lampMatrices.push(o.matrix.clone());
 
@@ -195,7 +195,7 @@ export function Signals() {
         castShadow
         onClick={onClickSignal}
       >
-        <cylinderGeometry args={[0.07, 0.07, 0.9, 6]} />
+        <cylinderGeometry args={[0.09, 0.09, 1.4, 6]} />
         <meshStandardMaterial color="#1f2733" />
       </instancedMesh>
       <instancedMesh
@@ -210,7 +210,7 @@ export function Signals() {
           document.body.style.cursor = "auto";
         }}
       >
-        <sphereGeometry args={[0.22, 10, 8]} />
+        <sphereGeometry args={[0.42, 10, 8]} />
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
     </group>

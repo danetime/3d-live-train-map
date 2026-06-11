@@ -1,99 +1,59 @@
 /**
- * The Exeter network — laid out as a STRAIGHT-LINE SCHEMATIC (Traksy / tube-map
- * style) rather than true geography.
+ * The Exeter test network.
  *
- * Stations are placed by hand on straight lines in world space, then converted
- * back to lat/lng (the inverse of geo.project) so the rest of the engine — which
- * positions trains by mileage along each line's spline — keeps working unchanged.
- * The Main Line is one straight spine (Plymouth ↔ Taunton through Exeter); the
- * Avocet branch peels off at Exeter and the Riviera branch at Newton Abbot.
+ * Coordinates are approximate real-world lat/lng for stations and a few
+ * intermediate bends, traced from OpenStreetMap / OpenRailwayMap. They don't
+ * need to be perfect — the scene smooths each line into a spline, so a handful
+ * of waypoints is enough to capture the shape of each route.
+ *
+ * To make these more accurate later, pull the `railway=rail` ways for each
+ * route from the Overpass API (https://overpass-turbo.eu) and drop the
+ * coordinate list in here.
  */
 import type { Line, LatLng, Station } from "./types";
+import lineGeometryJson from "./lineGeometry.json";
 
 /** Central hub. Everything is positioned relative to this. */
 export const ORIGIN = { lat: 50.7290, lng: -3.5435 }; // Exeter St David's
 
-// --- Schematic layout → lat/lng -------------------------------------------
-// Inverse of geo.project (kept in sync by hand to avoid a circular import).
-const WORLD_SCALE = 0.004;
-const M_PER_DEG_LAT = 111_320;
-const M_PER_DEG_LNG = M_PER_DEG_LAT * Math.cos((ORIGIN.lat * Math.PI) / 180);
+export const STATIONS: Station[] = [
+  { code: "EXD", name: "Exeter St David's", pos: { lat: 50.7290, lng: -3.5435 }, hub: true },
 
-/** A world (x, z) point on the schematic → the lat/lng that projects to it. */
-const at = (x: number, z: number): LatLng => ({
-  lat: ORIGIN.lat - z / (M_PER_DEG_LAT * WORLD_SCALE),
-  lng: ORIGIN.lng + x / (M_PER_DEG_LNG * WORLD_SCALE),
-});
-
-const SPINE_GAP = 13; // spacing between consecutive spine stations
-const BRANCH_GAP = 9; // spacing along a branch
-
-const unit = (x: number, z: number) => {
-  const m = Math.hypot(x, z);
-  return { x: x / m, z: z / m };
-};
-
-// The Main Line spine, Plymouth → Taunton, centred on Exeter St David's.
-const SPINE = ["PLY", "IVY", "TOT", "NTA", "TGM", "DWL", "DWW", "SCS", "MRB", "EXT", "EXD", "TVP", "TAU"];
-const EXD_INDEX = SPINE.indexOf("EXD");
-
-const LAYOUT: Record<string, { x: number; z: number }> = {};
-SPINE.forEach((code, i) => {
-  LAYOUT[code] = { x: (i - EXD_INDEX) * SPINE_GAP, z: 0 };
-});
-
-/** Lay a branch of stations along a straight ray from a junction station. */
-function branch(from: string, dir: { x: number; z: number }, codes: string[]) {
-  const o = LAYOUT[from];
-  const d = unit(dir.x, dir.z);
-  codes.forEach((code, i) => {
-    LAYOUT[code] = { x: o.x + d.x * BRANCH_GAP * (i + 1), z: o.z + d.z * BRANCH_GAP * (i + 1) };
-  });
-}
-
-// Avocet branch peels off Exeter heading down-left; Riviera off Newton Abbot.
-branch("EXD", { x: -0.5, z: 1 }, ["EXC", "SJP", "POL", "DIG", "NCO", "TOP", "EXN", "LYC", "LYM", "EXM"]);
-branch("NTA", { x: 0.4, z: 1 }, ["TRR", "TQY", "PGN"]);
-
-/** [code, name, hub?] — positions come from the schematic LAYOUT above. */
-const STATION_DEFS: [string, string, boolean?][] = [
-  ["EXD", "Exeter St David's", true],
   // Avocet line → Exmouth
-  ["EXC", "Exeter Central"],
-  ["SJP", "St James Park"],
-  ["POL", "Polsloe Bridge"],
-  ["DIG", "Digby & Sowton"],
-  ["NCO", "Newcourt"],
-  ["TOP", "Topsham"],
-  ["EXN", "Exton"],
-  ["LYC", "Lympstone Commando"],
-  ["LYM", "Lympstone Village"],
-  ["EXM", "Exmouth"],
-  // Main line SW → Plymouth (via the Dawlish sea wall)
-  ["EXT", "Exeter St Thomas"],
-  ["MRB", "Marsh Barton"],
-  ["SCS", "Starcross"],
-  ["DWW", "Dawlish Warren"],
-  ["DWL", "Dawlish"],
-  ["TGM", "Teignmouth"],
-  ["NTA", "Newton Abbot"],
-  ["TOT", "Totnes"],
-  ["IVY", "Ivybridge"],
-  ["PLY", "Plymouth"],
-  // Riviera/Torbay branch → Paignton
-  ["TRR", "Torre"],
-  ["TQY", "Torquay"],
-  ["PGN", "Paignton"],
-  // Main line NE → Taunton
-  ["TVP", "Tiverton Parkway"],
-  ["TAU", "Taunton"],
-];
+  { code: "EXC", name: "Exeter Central", pos: { lat: 50.7250, lng: -3.5320 } },
+  { code: "SJP", name: "St James Park", pos: { lat: 50.7273, lng: -3.5165 } },
+  { code: "POL", name: "Polsloe Bridge", pos: { lat: 50.7310, lng: -3.5060 } },
+  { code: "DIG", name: "Digby & Sowton", pos: { lat: 50.7090, lng: -3.4720 } },
+  { code: "NCO", name: "Newcourt", pos: { lat: 50.6990, lng: -3.4660 } },
+  { code: "TOP", name: "Topsham", pos: { lat: 50.6870, lng: -3.4640 } },
+  { code: "EXN", name: "Exton", pos: { lat: 50.6680, lng: -3.4420 } },
+  { code: "LYC", name: "Lympstone Commando", pos: { lat: 50.6580, lng: -3.4400 } },
+  { code: "LYM", name: "Lympstone Village", pos: { lat: 50.6470, lng: -3.4360 } },
+  { code: "EXM", name: "Exmouth", pos: { lat: 50.6190, lng: -3.4140 } },
 
-export const STATIONS: Station[] = STATION_DEFS.map(([code, name, hub]) => {
-  const p = LAYOUT[code];
-  if (!p) throw new Error(`No schematic position for station: ${code}`);
-  return { code, name, pos: at(p.x, p.z), ...(hub ? { hub: true } : {}) };
-});
+  // Riviera line → Newton Abbot (via the Dawlish sea wall)
+  { code: "EXT", name: "Exeter St Thomas", pos: { lat: 50.7160, lng: -3.5380 } },
+  { code: "MRB", name: "Marsh Barton", pos: { lat: 50.7060, lng: -3.5260 } },
+  { code: "SCS", name: "Starcross", pos: { lat: 50.6280, lng: -3.4490 } },
+  { code: "DWW", name: "Dawlish Warren", pos: { lat: 50.5990, lng: -3.4430 } },
+  { code: "DWL", name: "Dawlish", pos: { lat: 50.5810, lng: -3.4660 } },
+  { code: "TGM", name: "Teignmouth", pos: { lat: 50.5470, lng: -3.4960 } },
+  { code: "NTA", name: "Newton Abbot", pos: { lat: 50.5290, lng: -3.6000 } },
+
+  // Main line SW → Plymouth (continues beyond Newton Abbot)
+  { code: "TOT", name: "Totnes", pos: { lat: 50.4255, lng: -3.6888 } },
+  { code: "IVY", name: "Ivybridge", pos: { lat: 50.3917, lng: -3.9136 } },
+  { code: "PLY", name: "Plymouth", pos: { lat: 50.3779, lng: -4.1426 } },
+
+  // Riviera/Torbay branch → Paignton (branches at Newton Abbot)
+  { code: "TRR", name: "Torre", pos: { lat: 50.4719, lng: -3.5402 } },
+  { code: "TQY", name: "Torquay", pos: { lat: 50.4540, lng: -3.5436 } },
+  { code: "PGN", name: "Paignton", pos: { lat: 50.4352, lng: -3.5606 } },
+
+  // Main line NE → Taunton
+  { code: "TVP", name: "Tiverton Parkway", pos: { lat: 50.9170, lng: -3.3640 } },
+  { code: "TAU", name: "Taunton", pos: { lat: 51.0250, lng: -3.1015 } },
+];
 
 const STATION_BY_CODE = new Map(STATIONS.map((s) => [s.code, s]));
 
@@ -104,11 +64,117 @@ export const stationPos = (code: string): LatLng => {
 };
 
 /**
- * Drawing geometry per line. In the schematic, a line is simply the straight
- * polyline through its own stops — no curvy waypoints — so the track runs dead
- * straight and turns only at branch junctions.
+ * Drawing geometry per line, denser than the stops so the track follows the
+ * real route's curves. Generated geometry from OpenStreetMap (lineGeometry.json,
+ * produced by scripts/fetchTrackGeometry.mjs) wins; then these hand-traced
+ * points; otherwise we fall back to a straightish line through the stops.
  */
-function geometryFor(_id: string, stops: string[]): LatLng[] {
+/**
+ * Shared Exeter→Newton Abbot trunk: down the west bank of the Exe, along the
+ * Dawlish sea wall, then up the Teign estuary. Used by both SW lines.
+ */
+const TRUNK_SW: LatLng[] = [
+  { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
+  { lat: 50.7160, lng: -3.5380 }, // Exeter St Thomas
+  { lat: 50.7060, lng: -3.5260 }, // Marsh Barton
+  { lat: 50.6920, lng: -3.5050 }, // Countess Wear
+  { lat: 50.6790, lng: -3.4950 }, // Exminster
+  { lat: 50.6520, lng: -3.4620 }, // Powderham
+  { lat: 50.6280, lng: -3.4490 }, // Starcross
+  { lat: 50.5990, lng: -3.4430 }, // Dawlish Warren
+  { lat: 50.5900, lng: -3.4480 }, // the sea wall
+  { lat: 50.5810, lng: -3.4660 }, // Dawlish
+  { lat: 50.5660, lng: -3.4800 }, // Parson's Tunnel
+  { lat: 50.5470, lng: -3.4960 }, // Teignmouth
+  { lat: 50.5450, lng: -3.5260 }, // Teign north bank
+  { lat: 50.5400, lng: -3.5640 }, // Bishopsteignton
+  { lat: 50.5290, lng: -3.6000 }, // Newton Abbot
+];
+
+const HAND_GEOMETRY: Record<string, LatLng[]> = {
+  // Avocet line: out through Exeter Central, then south down the east bank of
+  // the Exe estuary, hugging the shore through Lympstone.
+  exmouth: [
+    { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
+    { lat: 50.7265, lng: -3.5370 },
+    { lat: 50.7250, lng: -3.5320 }, // Exeter Central
+    { lat: 50.7273, lng: -3.5165 }, // St James' Park
+    { lat: 50.7310, lng: -3.5060 }, // Polsloe Bridge
+    { lat: 50.7280, lng: -3.4920 },
+    { lat: 50.7180, lng: -3.4790 },
+    { lat: 50.7090, lng: -3.4720 }, // Digby & Sowton
+    { lat: 50.6990, lng: -3.4660 }, // Newcourt
+    { lat: 50.6870, lng: -3.4640 }, // Topsham
+    { lat: 50.6760, lng: -3.4585 }, // estuary east bank
+    { lat: 50.6680, lng: -3.4420 }, // Exton
+    { lat: 50.6580, lng: -3.4400 }, // Lympstone Commando
+    { lat: 50.6470, lng: -3.4360 }, // Lympstone Village
+    { lat: 50.6330, lng: -3.4250 }, // shore curve
+    { lat: 50.6190, lng: -3.4140 }, // Exmouth
+  ],
+  // Main line beyond Newton Abbot: over Dainton bank, Totnes, the South Devon
+  // banks past South Brent/Ivybridge, then Plympton and Laira into Plymouth.
+  "newton-abbot": [
+    ...TRUNK_SW,
+    { lat: 50.5150, lng: -3.6300 }, // Aller
+    { lat: 50.5050, lng: -3.6650 }, // Dainton bank
+    { lat: 50.4830, lng: -3.6900 }, // Stoneycombe
+    { lat: 50.4500, lng: -3.6870 },
+    { lat: 50.4255, lng: -3.6888 }, // Totnes
+    { lat: 50.4230, lng: -3.7350 }, // Rattery climb
+    { lat: 50.4290, lng: -3.7900 }, // Rattery
+    { lat: 50.4250, lng: -3.8330 }, // South Brent
+    { lat: 50.4090, lng: -3.8780 }, // Wrangaton
+    { lat: 50.3917, lng: -3.9136 }, // Ivybridge
+    { lat: 50.3870, lng: -3.9700 },
+    { lat: 50.3855, lng: -4.0200 }, // Hemerdon bank
+    { lat: 50.3860, lng: -4.0660 }, // Plympton
+    { lat: 50.3690, lng: -4.1050 }, // Laira, along the Plym
+    { lat: 50.3720, lng: -4.1300 }, // Lipson curve
+    { lat: 50.3779, lng: -4.1426 }, // Plymouth
+  ],
+  // Torbay branch: south from Newton Abbot through Kingskerswell to the coast.
+  paignton: [
+    ...TRUNK_SW, // shared trunk — branch leaves at Newton Abbot
+    { lat: 50.5160, lng: -3.5930 }, // Aller Jn, curving south
+    { lat: 50.5030, lng: -3.5870 }, // Kingskerswell
+    { lat: 50.4870, lng: -3.5680 }, // Edginswell
+    { lat: 50.4719, lng: -3.5402 }, // Torre
+    { lat: 50.4540, lng: -3.5436 }, // Torquay
+    { lat: 50.4450, lng: -3.5560 }, // Hollicombe shore
+    { lat: 50.4352, lng: -3.5606 }, // Paignton
+  ],
+  // GWR main line up the Culm valley — the stops alone made it near-straight.
+  taunton: [
+    { lat: 50.7290, lng: -3.5435 }, // Exeter St David's
+    { lat: 50.7430, lng: -3.5505 }, // Cowley Bridge Jn
+    { lat: 50.7570, lng: -3.5050 }, // Stoke Canon
+    { lat: 50.7900, lng: -3.4750 }, // Silverton
+    { lat: 50.8120, lng: -3.4520 }, // Hele & Bradninch
+    { lat: 50.8550, lng: -3.3920 }, // Cullompton
+    { lat: 50.9170, lng: -3.3640 }, // Tiverton Parkway
+    { lat: 50.9400, lng: -3.3250 }, // Whiteball
+    { lat: 50.9750, lng: -3.2250 }, // Wellington
+    { lat: 51.0150, lng: -3.1500 }, // Norton Fitzwarren
+    { lat: 51.0250, lng: -3.1015 }, // Taunton
+  ],
+};
+
+const osmGeometry = lineGeometryJson as Record<string, [number, number][]>;
+
+function geometryFor(id: string, stops: string[]): LatLng[] {
+  // Verified, baked geometry is the source of truth — reliable and independent
+  // of the (flaky) OSM fetch. OSM is only a fallback for any line we haven't
+  // hand-traced, and only if it actually reaches that line's terminus.
+  if (HAND_GEOMETRY[id]) return HAND_GEOMETRY[id];
+  const osm = osmGeometry[id];
+  if (osm && osm.length > 1) {
+    const last = osm[osm.length - 1];
+    const term = stationPos(stops[stops.length - 1]);
+    const reaches = Math.abs(last[0] - term.lat) + Math.abs(last[1] - term.lng) <= 0.04;
+    if (reaches) return osm.map(([lat, lng]) => ({ lat, lng }));
+    console.warn(`[map] lineGeometry.json for "${id}" stops short — using fallback`);
+  }
   return stops.map(stationPos);
 }
 

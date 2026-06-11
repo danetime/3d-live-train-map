@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { isOverWater } from "../data/water";
 
 const GROUND_SIZE = 1600;
-const TREE_COUNT = 110;
+const TREE_COUNT = 260;
 const HILL_COUNT = 9;
 
 /** Deterministic pseudo-random so the scenery is stable between reloads. */

@@ -31,10 +31,9 @@ function generateTowns(): Building[] {
   for (const station of STATIONS) {
     const c = project(station.pos);
     const isHub = !!station.hub;
-    // Cosy, low towns — a handful of cottages per station, never towers.
-    const count = isHub ? 26 : 5 + Math.floor(rng() * 7);
-    const radius = isHub ? 16 : 8;
-    const clearing = isHub ? 4 : 2.4;
+    const count = isHub ? 52 : 7 + Math.floor(rng() * 11);
+    const radius = isHub ? 22 : 9;
+    const clearing = isHub ? 5 : 2.6;
     for (let i = 0; i < count; i++) {
       const ang = rng() * Math.PI * 2;
       const r = clearing + rng() * (radius - clearing);
@@ -46,7 +45,7 @@ function generateTowns(): Building[] {
         z,
         w: 0.6 + rng() * 1.3,
         d: 0.6 + rng() * 1.3,
-        h: isHub ? 1.0 + rng() * 1.9 : 0.7 + rng() * 1.3,
+        h: isHub ? 1.2 + rng() * 4.6 : 0.9 + rng() * 2.2,
         wall: Math.floor(rng() * WALLS.length),
         roof: Math.floor(rng() * ROOFS.length),
       });
@@ -100,11 +99,11 @@ export function Buildings() {
         receiveShadow
       >
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial flatShading />
+        <meshStandardMaterial flatShading vertexColors />
       </instancedMesh>
       <instancedMesh args={[undefined, undefined, roofs.length]} ref={applyInstances(roofs)} castShadow>
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial flatShading />
+        <meshStandardMaterial flatShading vertexColors />
       </instancedMesh>
     </group>
   );

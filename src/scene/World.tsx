@@ -1,11 +1,9 @@
 /** The R3F canvas: sky, sun, camera controls and the whole scene graph. */
 import { useRef } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Sky } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import { STATIONS } from "../data/network";
-import { project } from "../data/geo";
 import { Ground } from "./Ground";
 import { Water } from "./Water";
 import { Buildings } from "./Buildings";
@@ -15,85 +13,39 @@ import { Signals } from "./Signals";
 import { Stations } from "./Stations";
 import { StationDetail } from "./StationDetail";
 import { Trains } from "./Trains";
-import { PixelEffect } from "./PixelEffect";
 import { useTrainStore } from "../store/useTrainStore";
 import { trainPositions } from "../sim/trainPositions";
 
 /**
- * Isometric camera behaviour (the 2.5D pixel-art direction):
- * - Fixed isometric angle — pan and zoom only, no free tilt/orbit.
- * - Nothing selected → the whole network is framed; pan/zoom freely.
- * - Train selected → glide the view over that train and zoom in to follow it.
+ * Camera behaviour:
+ * - Nothing selected → hands off: orbit, zoom and PAN freely anywhere.
+ * - Train selected → fly to a top-down view of that train and follow it.
  */
-const ISO = new THREE.Vector3(1, 1, 1).normalize();
-const CAM_DIST = 1600; // ortho: sets only the view direction + near/far, not scale
-const FOLLOW_ZOOM = 7; // multiple of the whole-network fit zoom
+const FOLLOW_OFFSET = new THREE.Vector3(0, 52, 9);
 
-// Network bounds in world space, from the station positions (computed once).
-const BOUNDS = (() => {
-  const v = new THREE.Vector3();
-  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-  for (const s of STATIONS) {
-    project(s.pos, v);
-    minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
-    minZ = Math.min(minZ, v.z); maxZ = Math.max(maxZ, v.z);
-  }
-  return {
-    center: new THREE.Vector3((minX + maxX) / 2, 0, (minZ + maxZ) / 2),
-    diag: maxX - minX + (maxZ - minZ), // iso footprint ≈ the X+Z diagonal
-  };
-})();
-
-/** Orthographic zoom that frames the whole network for the current canvas. */
-function fitZoom(w: number, h: number): number {
-  return (0.78 * Math.min(w, h * 1.6)) / Math.max(BOUNDS.diag, 1);
-}
-
-/** Map zoom (relative to the fit zoom) onto a detail level (0 far … 3 close). */
-function levelForZoom(ratio: number): number {
-  if (ratio < 2) return 0;
-  if (ratio < 4.5) return 1;
-  if (ratio < 9) return 2;
+/** Map camera distance-to-target onto a detail level (0 far … 3 close). */
+function levelFor(d: number): number {
+  if (d > 200) return 0;
+  if (d > 95) return 1;
+  if (d > 42) return 2;
   return 3;
 }
 
 function CameraRig({ controls }: { controls: React.RefObject<OrbitControlsImpl> }) {
   const selectedId = useTrainStore((s) => s.selectedId);
   const setDetailLevel = useTrainStore((s) => s.setDetailLevel);
-  const { size } = useThree();
-  const inited = useRef(false);
   const goal = useRef(new THREE.Vector3());
 
   useFrame(({ camera }) => {
     const ctrl = controls.current;
     if (!ctrl) return;
-    const cam = camera as THREE.OrthographicCamera;
-    const fz = fitZoom(size.width, size.height);
-
-    // First frame: frame the whole network at the isometric angle, and make
-    // both mouse buttons pan (no orbit in a fixed-iso view).
-    if (!inited.current) {
-      ctrl.target.copy(BOUNDS.center);
-      cam.position.copy(BOUNDS.center).addScaledVector(ISO, CAM_DIST);
-      cam.zoom = fz;
-      cam.updateProjectionMatrix();
-      ctrl.mouseButtons.LEFT = THREE.MOUSE.PAN;
-      ctrl.mouseButtons.RIGHT = THREE.MOUSE.PAN;
-      ctrl.touches.ONE = THREE.TOUCH.PAN;
-      inited.current = true;
-    }
-
-    // Follow a selected train: glide the view across and zoom in.
     const target = selectedId ? trainPositions.get(selectedId) : null;
     if (target) {
       ctrl.target.lerp(target, 0.08);
-      goal.current.copy(ctrl.target).addScaledVector(ISO, CAM_DIST);
-      cam.position.lerp(goal.current, 0.08);
-      cam.zoom += (fz * FOLLOW_ZOOM - cam.zoom) * 0.08;
-      cam.updateProjectionMatrix();
+      goal.current.copy(target).add(FOLLOW_OFFSET);
+      camera.position.lerp(goal.current, 0.06);
     }
-
-    setDetailLevel(levelForZoom(cam.zoom / fz));
+    setDetailLevel(levelFor(camera.position.distanceTo(ctrl.target)));
     ctrl.update();
   });
   return null;
@@ -106,25 +58,23 @@ export function World() {
   const detailLevel = useTrainStore((s) => s.detailLevel);
   const land = useTrainStore((s) => s.theme) === "land";
 
-  const bg = land ? "#9ad0f0" : "#e7e1d3";
+  const bg = land ? "#9ad0f0" : "#0b1220";
 
   return (
     <Canvas
       shadows
-      orthographic
-      camera={{ position: [1600, 1600, 1600], near: 0.1, far: 6000, zoom: 6 }}
+      camera={{ position: [90, 130, 170], fov: 50, near: 0.1, far: 4000 }}
       onPointerMissed={() => {
         clearSelection(null);
         clearSignal(null);
       }}
     >
       <color attach="background" args={[bg]} />
-      {/* No fog: under an orthographic iso camera everything sits at roughly the
-          same camera distance, so distance fog would just tint the scene flatly. */}
+      <fog attach="fog" args={land ? [bg, 520, 1400] : [bg, 900, 2600]} />
 
       {land && <Sky sunPosition={[120, 180, 80]} turbidity={4} rayleigh={1.5} />}
-      <ambientLight intensity={land ? 0.6 : 0.85} />
-      <hemisphereLight args={land ? ["#cfe9ff", "#6e9a4f", 0.6] : ["#fffaf0", "#d8d0bf", 0.7]} />
+      <ambientLight intensity={land ? 0.6 : 0.95} />
+      <hemisphereLight args={land ? ["#cfe9ff", "#6e9a4f", 0.6] : ["#3a4a66", "#0b1220", 0.6]} />
       <directionalLight
         color={land ? "#fff3df" : "#dce6ff"}
         position={[120, 180, 80]}
@@ -151,16 +101,15 @@ export function World() {
         </>
       ) : (
         <>
-          {/* Clean warm "board" the schematic sits on. */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
             <planeGeometry args={[3000, 3000]} />
-            <meshStandardMaterial color="#ddd5c4" />
+            <meshStandardMaterial color="#0e1626" />
           </mesh>
-          <gridHelper args={[1800, 60, "#cfc7b4", "#d7cfbd"]} position={[0, -0.46, 0]} />
+          <gridHelper args={[1800, 60, "#27395a", "#16223a"]} position={[0, -0.46, 0]} />
         </>
       )}
       <RailNetwork />
-      {detailLevel >= 3 && <Signals />}
+      {detailLevel >= 2 && <Signals />}
       <Stations />
       {detailLevel >= 3 && <StationDetail />}
       <Trains />
@@ -169,15 +118,14 @@ export function World() {
         ref={controls}
         enableDamping
         dampingFactor={0.08}
-        enableRotate={false}
         enablePan
-        screenSpacePanning
+        screenSpacePanning={false}
         panSpeed={1.1}
-        minZoom={0.6}
-        maxZoom={600}
+        minDistance={12}
+        maxDistance={600}
+        maxPolarAngle={Math.PI / 2.15}
       />
       <CameraRig controls={controls} />
-      <PixelEffect pixelSize={5} />
     </Canvas>
   );
 }
