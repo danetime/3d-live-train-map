@@ -94,20 +94,63 @@ function TrainBody({ color, selected }: { color: string; selected: boolean }) {
 }
 
 /**
- * Compact glowing marker used in the Signal theme — proportionate to the map
- * (a detailed loco model would be ~1.5 km long at this scale). Faces +Z.
+ * Single-carriage pill used in the Signal theme — proportionate to the map
+ * (a true-scale carriage would be invisible; a detailed loco ~1.5 km long).
+ * Faces +Z. Detail builds with the camera's `detailLevel` (the same 0–3 zoom
+ * levels that drive signals/station detail): far away it's a clean coloured
+ * pill, closer in it gains a window band and head/tail lights so you can read
+ * the direction of travel. Later: carriage count from the NR feed.
  */
-function SignalMarker({ color, selected }: { color: string; selected: boolean }) {
+function PillCarriage({
+  color,
+  selected,
+  detail,
+}: {
+  color: string;
+  selected: boolean;
+  detail: number;
+}) {
+  const roof = useMemo(() => new THREE.Color(color).multiplyScalar(0.6), [color]);
   return (
-    <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.35, 0]}>
-      <capsuleGeometry args={[0.3, 0.95, 4, 12]} />
-      <meshStandardMaterial
-        color={color}
-        emissive={color}
-        emissiveIntensity={selected ? 1.5 : 0.95}
-        toneMapped={false}
-      />
-    </mesh>
+    <group position={[0, -0.3, 0]}>
+      {/* Carriage body: a pill lying along the direction of travel. Modest
+          emissive so the line colour reads instead of blowing out to white. */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <capsuleGeometry args={[0.3, 1.5, 6, 14]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={selected ? 0.9 : 0.3}
+        />
+      </mesh>
+
+      {detail >= 2 && (
+        <group>
+          {/* Window band poking through both flanks */}
+          <mesh position={[0, 0.08, 0]}>
+            <boxGeometry args={[0.64, 0.16, 1.35]} />
+            <meshStandardMaterial color="#d7e7f8" emissive="#9fc4e8" emissiveIntensity={0.35} />
+          </mesh>
+          {/* Headlight (front, +Z) and tail light (rear) */}
+          <mesh position={[0, 0, 1.06]}>
+            <sphereGeometry args={[0.1, 8, 8]} />
+            <meshStandardMaterial color="#fff6c0" emissive="#ffefa0" emissiveIntensity={1.4} />
+          </mesh>
+          <mesh position={[0, 0, -1.06]}>
+            <sphereGeometry args={[0.08, 8, 8]} />
+            <meshStandardMaterial color="#ff5a5a" emissive="#ff3030" emissiveIntensity={1.2} />
+          </mesh>
+        </group>
+      )}
+
+      {detail >= 3 && (
+        /* Roof stripe — a darker top line that sells "carriage" up close */
+        <mesh position={[0, 0.26, 0]}>
+          <boxGeometry args={[0.34, 0.08, 1.45]} />
+          <meshStandardMaterial color={roof} />
+        </mesh>
+      )}
+    </group>
   );
 }
 
@@ -151,6 +194,7 @@ export function Train({ train }: { train: TrainModel }) {
 
   const selectedId = useTrainStore((s) => s.selectedId);
   const signal = useTrainStore((s) => s.theme) === "signal";
+  const detailLevel = useTrainStore((s) => s.detailLevel);
   const advance = useTrainStore((s) => s.advance);
   const select = useTrainStore((s) => s.select);
 
@@ -264,7 +308,7 @@ export function Train({ train }: { train: TrainModel }) {
       }}
     >
       {signal ? (
-        <SignalMarker color={line.color} selected={selected} />
+        <PillCarriage color={line.color} selected={selected} detail={detailLevel} />
       ) : (
         <TrainBody color={line.color} selected={selected} />
       )}
