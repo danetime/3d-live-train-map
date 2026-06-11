@@ -155,6 +155,25 @@ for (const r of smartRows) {
   consider(r.FROMBERTH, 0);
 }
 
+// Authoritative per-berth direction, from the SMART event codes of the steps
+// INTO each berth (A/B = up, C/D = down). This is what a berth's platform line
+// actually carries — far more reliable than which BFS chain a berth lands in,
+// so we use it to keep up-platform berths out of the down list and vice versa.
+const berthVotes = new Map(); // berth → { down, up }
+for (const r of smartRows) {
+  if (!isReal(r.TOBERTH)) continue;
+  const v = berthVotes.get(r.TOBERTH) ?? { down: 0, up: 0 };
+  if (r.EVENT === "C" || r.EVENT === "D") v.down++;
+  else if (r.EVENT === "A" || r.EVENT === "B") v.up++;
+  berthVotes.set(r.TOBERTH, v);
+}
+/** "down" | "up" | null (no votes / tied = ambiguous). */
+function berthDirection(berth) {
+  const v = berthVotes.get(berth);
+  if (!v || v.down === v.up) return null;
+  return v.down > v.up ? "down" : "up";
+}
+
 // Direction-filtered step graphs. EVENT: A/B = up, C/D = down.
 function graphFor(direction) {
   const next = new Map(); // berth → Set(berth)
@@ -228,8 +247,17 @@ function extract(direction) {
   }
 
   const out = []; // { berth, stanox, miles (decimal), location, platform }
+  const rejected = []; // berths whose own event codes say the other direction
   const add = (berth, miles) => {
     if (out.some((o) => o.berth === berth)) return; // global de-dup
+    // Reject berths whose authoritative direction contradicts this list. A
+    // berth with no votes (ambiguous, e.g. a bidirectional bay) is allowed
+    // through but flagged below.
+    const bd = berthDirection(berth);
+    if (bd && bd !== direction) {
+      if (!rejected.includes(berth)) rejected.push(berth);
+      return;
+    }
     const info = berthInfo.get(berth);
     out.push({
       berth,
@@ -262,6 +290,14 @@ function extract(direction) {
       const f = path.length === 1 ? 0 : idx / (path.length - 1);
       add(berth, mA + (mB - mA) * f);
     });
+  }
+  if (rejected.length) {
+    console.log(`[berths] ${direction}: rejected (event codes say opposite dir): ${rejected.join(", ")}`);
+  }
+  // Flag berths we included but couldn't direction-verify, for a human to check.
+  const ambiguous = out.filter((o) => berthDirection(o.berth) === null).map((o) => o.berth);
+  if (ambiguous.length) {
+    console.log(`[berths] ${direction}: included but UNVERIFIED direction (check platform): ${ambiguous.join(", ")}`);
   }
   return out;
 }

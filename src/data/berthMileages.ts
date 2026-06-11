@@ -31,18 +31,20 @@ import type { BerthPos } from "./berths";
 export type BerthMileage = { line: string; miles: number; chains: number; dir?: 1 | -1 };
 
 export const BERTH_MILEAGES: Record<string, BerthMileage> = {
-  // --- Real Exeter-panel main-line berths, extracted from Network Rail SMART
-  //     (server/scripts/extractMainLineBerths.js). dir 1 = down (toward
-  //     Plymouth), dir -1 = up (toward Exeter/Paddington). Station-platform
-  //     berths so far; intermediate sea-wall berths to follow on re-run.
-  // DOWN
+  // --- Real Exeter-panel (TD area EX) main-line berths, from Network Rail
+  //     SMART via server/scripts/extractMainLineBerths.js, platform-verified.
+  //     dir 1 = down (toward Plymouth, P1/P5), dir -1 = up (toward Exeter, P2/P6).
+  //     This panel reports berths only at the stations on the open line, so a
+  //     train keeps its rail while it eases between them.
+  // DOWN — Exeter → Teignmouth
   "EX:E360": { line: "newton-abbot", miles: 173, chains: 56, dir: 1 }, // Exeter St David's P5
   "EX:E062": { line: "newton-abbot", miles: 174, chains: 32, dir: 1 }, // Exeter St Thomas P1
   "EX:E072": { line: "newton-abbot", miles: 184, chains: 24, dir: 1 }, // Dawlish Warren P1
   "EX:D206": { line: "newton-abbot", miles: 185, chains: 64, dir: 1 }, // Dawlish P1
-  "EX:E276": { line: "newton-abbot", miles: 185, chains: 64, dir: 1 }, // Dawlish P2
   "EX:E278": { line: "newton-abbot", miles: 188, chains: 24, dir: 1 }, // Teignmouth P1
-  // UP
+  // UP — Teignmouth → Exeter
+  "EX:U208": { line: "newton-abbot", miles: 188, chains: 24, dir: -1 }, // Teignmouth P2
+  "EX:E017": { line: "newton-abbot", miles: 185, chains: 64, dir: -1 }, // Dawlish P2
   "EX:E025": { line: "newton-abbot", miles: 184, chains: 24, dir: -1 }, // Dawlish Warren P2
   "EX:U202": { line: "newton-abbot", miles: 181, chains: 40, dir: -1 }, // Starcross P2
   "EX:E035": { line: "newton-abbot", miles: 174, chains: 32, dir: -1 }, // Exeter St Thomas P2
