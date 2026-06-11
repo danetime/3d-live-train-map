@@ -177,6 +177,48 @@ function HeadcodeLabel({ code, selected }: { code: string; selected: boolean }) 
   );
 }
 
+/**
+ * Zoomed-out marker: a Habbo-style rounded map-pin in the line colour that
+ * stands in for the train when it's too small to see. Kept at a roughly
+ * constant *screen* size by scaling inverse to the orthographic zoom, so it
+ * stays readable however far you pull the camera out.
+ */
+function TrainBubble({ color, selected }: { color: string; selected: boolean }) {
+  const ref = useRef<THREE.Group>(null);
+  const ring = selected ? "#ffffff" : "#0e1d28";
+  useFrame(({ camera }) => {
+    if (!ref.current) return;
+    const zoom = (camera as THREE.OrthographicCamera).zoom || 1;
+    ref.current.scale.setScalar((selected ? 26 : 19) / zoom);
+  });
+  return (
+    <Billboard position={[0, 2.2, 0]}>
+      <group ref={ref}>
+        {/* Downward pointer tail toward the track */}
+        <mesh position={[0, -1.18, -0.01]}>
+          <coneGeometry args={[0.5, 0.7, 3]} />
+          <meshBasicMaterial color={ring} />
+        </mesh>
+        {/* Dark/white outline ring */}
+        <mesh position={[0, 0, -0.02]}>
+          <circleGeometry args={[1.04, 28]} />
+          <meshBasicMaterial color={ring} />
+        </mesh>
+        {/* Coloured disc */}
+        <mesh>
+          <circleGeometry args={[0.86, 28]} />
+          <meshBasicMaterial color={color} />
+        </mesh>
+        {/* Bright centre dot */}
+        <mesh position={[0, 0, 0.01]}>
+          <circleGeometry args={[0.3, 16]} />
+          <meshBasicMaterial color="#ffffff" />
+        </mesh>
+      </group>
+    </Billboard>
+  );
+}
+
 /** Ease an angle toward a target by fraction k, taking the short way round. */
 function easeAngle(cur: number, target: number, k: number): number {
   let d = target - cur;
@@ -307,12 +349,21 @@ export function Train({ train }: { train: TrainModel }) {
         document.body.style.cursor = "auto";
       }}
     >
-      {signal ? (
-        <PillCarriage color={line.color} selected={selected} detail={detailLevel} />
+      {detailLevel <= 1 ? (
+        // Zoomed out: a single clean map-pin per train (no body, no headcode
+        // plate) so the overview stays uncluttered.
+        <TrainBubble color={line.color} selected={selected} />
       ) : (
-        <TrainBody color={line.color} selected={selected} />
+        // Zoomed in: the real, to-scale train and its headcode plate.
+        <>
+          {signal ? (
+            <PillCarriage color={line.color} selected={selected} detail={detailLevel} />
+          ) : (
+            <TrainBody color={line.color} selected={selected} />
+          )}
+          <HeadcodeLabel code={train.headcode} selected={selected} />
+        </>
       )}
-      <HeadcodeLabel code={train.headcode} selected={selected} />
     </group>
   );
 }
