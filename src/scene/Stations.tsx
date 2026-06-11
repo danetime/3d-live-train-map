@@ -83,21 +83,17 @@ function LandStation({ size, height, isHub }: { size: number; height: number; is
   );
 }
 
+/**
+ * Temporary minimal marker: a flat white disc UNDER the track (track rides at
+ * BASE_Y ≈ 0.16) so stations read as map nodes without blocking the view of
+ * trains. The old glowing sphere-on-stem is parked until the design pass.
+ */
 function SignalStation({ isHub }: { isHub: boolean }) {
-  const color = isHub ? "#f6ad55" : "#dbe6f5";
-  const r = isHub ? 1.3 : 0.75;
   return (
-    <group position={[0, 1, 0]}>
-      <mesh>
-        <sphereGeometry args={[r, 16, 12]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.8} />
-      </mesh>
-      {/* Stem down to the line. */}
-      <mesh position={[0, -0.6, 0]}>
-        <cylinderGeometry args={[0.07, 0.07, 1.2, 6]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.5} />
-      </mesh>
-    </group>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
+      <circleGeometry args={[isHub ? 1.8 : 1.1, 24]} />
+      <meshBasicMaterial color="#ffffff" />
+    </mesh>
   );
 }
 

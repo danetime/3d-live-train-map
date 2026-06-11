@@ -53,7 +53,9 @@ export function connectTdFeed(
         headingTo: direction === 1 ? line?.destination ?? "" : "Exeter St David's",
         berth: r.berth,
         platform: exact?.platform,
-        pos: exact ? exact.ll : undefined,
+        // No `pos`: even with exact coordinates we ride the spline (berthLatLng
+        // already computed the nearest on-line t). Raw lat/lng sits slightly
+        // off the drawn track and skips the double-track rail offset.
       });
     }
     if (unmapped > 0) {
