@@ -44,6 +44,8 @@ type RttSearchService = {
   runDate: string;
   isPassenger?: boolean;
   serviceType?: string;
+  trainIdentity?: string;
+  locationDetail?: { destination?: RttPair[] };
 };
 
 type RttSearchResponse = { services?: RttSearchService[] | null };
@@ -181,7 +183,23 @@ export function mapServiceToTrain(detail: RttServiceDetail): Train | null {
   };
 }
 
-// ---- Public entry point ----
+// ---- Public entry points ----
+
+/**
+ * Build a `headcode → real destination` map from a single RTT search at Exeter.
+ * Used to enrich the TD feed (which has headcodes but no destinations). One
+ * request, so it's fair-use friendly enough to poll alongside the TD feed.
+ */
+export async function fetchHeadcodeDestinations(): Promise<Map<string, string>> {
+  const search = await getJson<RttSearchResponse>(`${BASE}/search/EXD`);
+  const map = new Map<string, string>();
+  for (const s of search.services ?? []) {
+    const code = s.trainIdentity;
+    const dest = s.locationDetail?.destination?.[0]?.description;
+    if (code && dest) map.set(code, dest);
+  }
+  return map;
+}
 
 /** Fetch live trains around Exeter St David's, mapped onto our network. */
 export async function fetchLiveTrains(): Promise<Train[]> {

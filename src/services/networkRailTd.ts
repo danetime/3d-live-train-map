@@ -10,6 +10,7 @@ import type { Train } from "../data/types";
 import { berthPosition, berthLatLng } from "../data/berths";
 import { berthMileagePosition } from "../data/berthMileages";
 import { LINE_BY_ID } from "../data/network";
+import { destinationForHeadcode } from "./headcodeDestinations";
 
 const WS_URL = (import.meta.env.VITE_TD_WS_URL as string) || "ws://localhost:4001";
 
@@ -50,7 +51,11 @@ export function connectTdFeed(
         t: pos.t,
         direction,
         speed: 0, // externally positioned; Train.tsx eases between berths
-        headingTo: direction === 1 ? line?.destination ?? "" : "Exeter St David's",
+        // Real destination from RTT where we have it; otherwise fall back to
+        // the line's terminus (outbound) or Exeter (inbound).
+        headingTo:
+          destinationForHeadcode(r.headcode) ??
+          (direction === 1 ? line?.destination ?? "" : "Exeter St David's"),
         berth: r.berth,
         platform: exact?.platform,
         // No `pos`: even with exact coordinates we ride the spline (berthLatLng
