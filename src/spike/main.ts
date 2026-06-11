@@ -1,147 +1,157 @@
 /**
- * Throwaway PixiJS isometric spike — validates the 2D pixel-art route
- * (PixelLab assets + an iso renderer) WITHOUT touching the live three.js app.
+ * PixiJS isometric renderer for the Exeter network — the 2D pixel-art route.
  *
- * Today it draws placeholder vector diamond tiles and a box "train" that glides
- * along a straight iso line. Everything that will become real art is isolated
- * behind small factory functions (makeTileTexture / makeTrainTexture) so a real
- * PixelLab PNG tileset can drop straight in — see loadArt() at the bottom.
+ * Runs alongside the three.js app (which stays at "/"); this is "/spike.html".
+ * It REUSES the existing data/logic layer — the same line definitions, the
+ * straight-line schematic layout, the spline curves and mileage maths — and
+ * only swaps the rendering shell from three.js to 2D isometric Pixi.
  *
- * Run: `npm run dev`, then open /spike.html
+ * Today the art is placeholder vector graphics and the trains are simulated.
+ * Next steps: real PixelLab tiles/sprites, then wire the live feed + the
+ * headcode/destination data the three.js app already produces.
  */
-import { Application, Container, Graphics, Sprite, type Texture } from "pixi.js";
+import { Application, Container, Graphics, Text } from "pixi.js";
+import { LINES, STATIONS, LINE_BY_ID } from "../data/network";
+import { project } from "../data/geo";
+import { lineCurve } from "../data/lineCurves";
+import { createMockTrains } from "../sim/mockTrains";
 
-const TW = 64; // iso tile width (pixels)
-const TH = 32; // iso tile height — 2:1 classic iso
-const GRID = 14; // board is GRID×GRID tiles
-const TRACK_ROW = 7; // the line runs along this grid row
+// --- isometric projection: world (x, z) → screen (raw iso units) ----------
+// Classic 2:1 iso. The world container is scaled to fit, so these are unitless.
+const isoX = (x: number, z: number) => x - z;
+const isoY = (x: number, z: number) => (x + z) * 0.5;
 
-// Grid (gx, gy) → screen pixels at the tile's centre.
-const isoX = (gx: number, gy: number) => (gx - gy) * (TW / 2);
-const isoY = (gx: number, gy: number) => (gx + gy) * (TH / 2);
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 async function main() {
   const app = new Application();
   await app.init({ background: "#e7e1d3", resizeTo: window, antialias: false });
   document.body.appendChild(app.canvas);
 
-  // World container holds the whole board; we pan/zoom this, not the camera.
   const world = new Container();
-  world.sortableChildren = true; // paint back-to-front by zIndex (= gx+gy)
+  world.sortableChildren = true;
   app.stage.addChild(world);
 
-  const art = makeArt(app);
-
-  // --- ground + track tiles ---------------------------------------------
-  const isWater = (gx: number, gy: number) => gy >= 11; // a strip of "estuary"
-  for (let gy = 0; gy < GRID; gy++) {
-    for (let gx = 0; gx < GRID; gx++) {
-      const tex =
-        gy === TRACK_ROW ? art.track : isWater(gx, gy) ? art.water : art.grass;
-      const s = new Sprite(tex);
-      s.anchor.set(0.5, 0.5);
-      s.x = isoX(gx, gy);
-      s.y = isoY(gx, gy);
-      s.zIndex = gx + gy;
-      world.addChild(s);
+  // --- track ribbons: sample each line's spline → an iso polyline ---------
+  const tracks = new Container();
+  tracks.sortableChildren = true;
+  world.addChild(tracks);
+  for (const line of LINES) {
+    const curve = lineCurve(line.id);
+    const N = 120;
+    const g = new Graphics();
+    for (let i = 0; i <= N; i++) {
+      const p = curve.getPointAt(i / N);
+      const sx = isoX(p.x, p.z);
+      const sy = isoY(p.x, p.z);
+      if (i === 0) g.moveTo(sx, sy);
+      else g.lineTo(sx, sy);
     }
+    g.stroke({ width: 2.2, color: line.color, cap: "round", join: "round", alpha: 0.95 });
+    g.zIndex = -1000; // tracks sit beneath everything
+    tracks.addChild(g);
   }
 
-  // --- station nodes ----------------------------------------------------
-  for (const gx of [3, 10]) {
-    const node = new Sprite(art.node);
-    node.anchor.set(0.5, 0.85);
-    node.x = isoX(gx, TRACK_ROW);
-    node.y = isoY(gx, TRACK_ROW);
-    node.zIndex = gx + TRACK_ROW + 0.4;
+  // --- station nodes + labels --------------------------------------------
+  for (const s of STATIONS) {
+    const p = project(s.pos);
+    const sx = isoX(p.x, p.z);
+    const sy = isoY(p.x, p.z);
+    const isHub = !!s.hub;
+
+    const node = new Graphics()
+      .circle(0, 0, isHub ? 2.6 : 1.7)
+      .fill(0x2b3340)
+      .circle(0, 0, isHub ? 1.3 : 0.85)
+      .fill(0xf3eee2);
+    node.x = sx;
+    node.y = sy;
+    node.zIndex = isoY(p.x, p.z);
     world.addChild(node);
+
+    const label = new Text({
+      text: s.name,
+      style: { fontFamily: "monospace", fontSize: 6, fill: 0x141a21, fontWeight: "bold" },
+    });
+    label.anchor.set(0.5, 1);
+    label.x = sx;
+    label.y = sy - (isHub ? 5 : 3.5);
+    label.zIndex = 100000; // labels always on top
+    label.resolution = 4; // crisp small text
+    world.addChild(label);
   }
 
-  // --- the train (placeholder; later a directional PixelLab sprite) -----
-  const train = new Sprite(art.train);
-  train.anchor.set(0.5, 0.82);
-  world.addChild(train);
-
-  // --- camera: centre the board, drag to pan, wheel to zoom -------------
-  const recentre = () => {
-    world.x = app.screen.width / 2;
-    world.y = app.screen.height / 2 - isoY(GRID - 1, GRID - 1) / 2;
+  // --- fit the whole network to the screen -------------------------------
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const s of STATIONS) {
+    const p = project(s.pos);
+    const sx = isoX(p.x, p.z);
+    const sy = isoY(p.x, p.z);
+    minX = Math.min(minX, sx); maxX = Math.max(maxX, sx);
+    minY = Math.min(minY, sy); maxY = Math.max(maxY, sy);
+  }
+  const fit = () => {
+    const scale = Math.min(
+      (app.screen.width * 0.82) / (maxX - minX),
+      (app.screen.height * 0.62) / (maxY - minY),
+    );
+    world.scale.set(scale);
+    world.x = app.screen.width / 2 - ((minX + maxX) / 2) * scale;
+    world.y = app.screen.height / 2 - ((minY + maxY) / 2) * scale;
   };
-  recentre();
-  window.addEventListener("resize", recentre);
+  fit();
+  window.addEventListener("resize", fit);
 
-  let dragging = false;
-  let lastX = 0;
-  let lastY = 0;
+  // --- simulated trains gliding along their lines ------------------------
+  type Sim = { lineId: string; t: number; dir: 1 | -1; speed: number; gfx: Graphics; tag: Text };
+  const sims: Sim[] = createMockTrains().map((tr) => {
+    const color = LINE_BY_ID.get(tr.lineId)?.color ?? "#3182ce";
+    const gfx = new Graphics().roundRect(-3.2, -2.2, 6.4, 3, 1).fill(color).stroke({ width: 0.5, color: 0x1a202c });
+    world.addChild(gfx);
+    const tag = new Text({
+      text: tr.headcode,
+      style: { fontFamily: "monospace", fontSize: 5, fill: 0x3dff62, fontWeight: "bold" },
+    });
+    tag.anchor.set(0.5, 1);
+    tag.resolution = 4;
+    world.addChild(tag);
+    return { lineId: tr.lineId, t: tr.t, dir: tr.direction, speed: tr.speed, gfx, tag };
+  });
+
+  app.ticker.add((ticker) => {
+    const dt = Math.min(ticker.deltaMS / 1000, 0.1);
+    for (const s of sims) {
+      s.t += s.dir * s.speed * dt;
+      if (s.t >= 1) { s.t = 1; s.dir = -1; }
+      else if (s.t <= 0) { s.t = 0; s.dir = 1; }
+      const p = lineCurve(s.lineId).getPointAt(clamp(s.t, 0.0001, 0.9999));
+      const sx = isoX(p.x, p.z);
+      const sy = isoY(p.x, p.z);
+      const depth = isoY(p.x, p.z) + 1;
+      s.gfx.x = sx; s.gfx.y = sy; s.gfx.zIndex = depth;
+      s.tag.x = sx; s.tag.y = sy - 3; s.tag.zIndex = 100001;
+    }
+  });
+
+  // --- camera: drag to pan, wheel to zoom --------------------------------
+  let dragging = false, lastX = 0, lastY = 0;
   app.stage.eventMode = "static";
   app.stage.hitArea = app.screen;
-  app.stage.on("pointerdown", (e) => {
-    dragging = true;
-    lastX = e.global.x;
-    lastY = e.global.y;
-  });
-  const endDrag = () => (dragging = false);
-  app.stage.on("pointerup", endDrag);
-  app.stage.on("pointerupoutside", endDrag);
+  app.stage.on("pointerdown", (e) => { dragging = true; lastX = e.global.x; lastY = e.global.y; });
+  const end = () => (dragging = false);
+  app.stage.on("pointerup", end);
+  app.stage.on("pointerupoutside", end);
   app.stage.on("pointermove", (e) => {
     if (!dragging) return;
-    world.x += e.global.x - lastX;
-    world.y += e.global.y - lastY;
-    lastX = e.global.x;
-    lastY = e.global.y;
+    world.x += e.global.x - lastX; world.y += e.global.y - lastY;
+    lastX = e.global.x; lastY = e.global.y;
   });
-  app.canvas.addEventListener(
-    "wheel",
-    (e) => {
-      e.preventDefault();
-      const f = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-      world.scale.set(Math.max(0.3, Math.min(4, world.scale.x * f)));
-    },
-    { passive: false },
-  );
-
-  // --- animate: ease the train back and forth along the track row -------
-  let t = 0;
-  app.ticker.add((ticker) => {
-    t += (ticker.deltaMS / 1000) * 0.55;
-    const p = (Math.sin(t) * 0.5 + 0.5) * (GRID - 1); // 0..GRID-1, eased
-    train.x = isoX(p, TRACK_ROW);
-    train.y = isoY(p, TRACK_ROW);
-    train.zIndex = p + TRACK_ROW + 0.5;
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Art factory. Everything here is a placeholder vector texture. To go real,
-// replace makeArt() with an async loader that pulls a PixelLab PNG tileset via
-// Pixi's Assets API and slices it into these same named textures.
-// ---------------------------------------------------------------------------
-function makeArt(app: Application) {
-  const diamond = (fill: number, line: number): Texture => {
-    const g = new Graphics()
-      .poly([0, -TH / 2, TW / 2, 0, 0, TH / 2, -TW / 2, 0])
-      .fill(fill)
-      .stroke({ width: 1, color: line });
-    return app.renderer.generateTexture(g);
-  };
-
-  const nodeG = new Graphics()
-    .circle(0, 0, 7)
-    .fill(0xf3eee2)
-    .stroke({ width: 3, color: 0x2b3340 });
-
-  const trainG = new Graphics()
-    .roundRect(-22, -18, 44, 22, 6)
-    .fill(0xe53e3e)
-    .stroke({ width: 2, color: 0x9b2c2c });
-
-  return {
-    grass: diamond(0x7fae54, 0x6f9c49),
-    water: diamond(0x6db4d8, 0x5aa0c6),
-    track: diamond(0x3182ce, 0x276bb0),
-    node: app.renderer.generateTexture(nodeG),
-    train: app.renderer.generateTexture(trainG),
-  };
+  app.canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const f = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+    const next = clamp(world.scale.x * f, 1, 60);
+    world.scale.set(next);
+  }, { passive: false });
 }
 
 main();
