@@ -156,16 +156,16 @@ function PillCarriage({
 
 /** Traksy-style headcode plate that floats above the train and faces the camera. */
 function HeadcodeLabel({ code, selected }: { code: string; selected: boolean }) {
-  const width = useMemo(() => code.length * 0.62 + 0.7, [code]);
+  const width = useMemo(() => code.length * 0.44 + 0.5, [code]);
   return (
-    <Billboard position={[0, 2.7, 0]}>
+    <Billboard position={[0, 2.3, 0]}>
       <mesh>
-        <planeGeometry args={[width, 1.15]} />
+        <planeGeometry args={[width, 0.82]} />
         <meshBasicMaterial color={selected ? "#143d16" : "#0c0c0c"} transparent opacity={0.88} />
       </mesh>
       <Text
         position={[0, 0, 0.01]}
-        fontSize={0.82}
+        fontSize={0.58}
         color="#3dff62"
         anchorX="center"
         anchorY="middle"

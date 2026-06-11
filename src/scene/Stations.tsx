@@ -50,7 +50,7 @@ function ScaledLabel({
           color={color}
           anchorX="center"
           anchorY="bottom"
-          outlineWidth={bold ? 0.14 : 0.1}
+          outlineWidth={bold ? 0.07 : 0.05}
           outlineColor={outline}
         >
           {text}
@@ -109,8 +109,8 @@ function SignalStation({ isHub }: { isHub: boolean }) {
 export function Stations() {
   const land = useTrainStore((s) => s.theme) === "land";
   const detailLevel = useTrainStore((s) => s.detailLevel);
-  const labelColor = land ? "#1a202c" : "#26303c";
-  const labelOutline = land ? "#ffffff" : "#efe9db";
+  const labelColor = land ? "#1a202c" : "#141a21";
+  const labelOutline = land ? "#ffffff" : "#f2ecdf";
 
   return (
     <group>

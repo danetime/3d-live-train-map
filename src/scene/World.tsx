@@ -160,7 +160,7 @@ export function World() {
         </>
       )}
       <RailNetwork />
-      {detailLevel >= 2 && <Signals />}
+      {detailLevel >= 3 && <Signals />}
       <Stations />
       {detailLevel >= 3 && <StationDetail />}
       <Trains />
