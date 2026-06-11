@@ -15,6 +15,7 @@ import { Signals } from "./Signals";
 import { Stations } from "./Stations";
 import { StationDetail } from "./StationDetail";
 import { Trains } from "./Trains";
+import { PixelEffect } from "./PixelEffect";
 import { useTrainStore } from "../store/useTrainStore";
 import { trainPositions } from "../sim/trainPositions";
 
@@ -175,6 +176,7 @@ export function World() {
         maxZoom={600}
       />
       <CameraRig controls={controls} />
+      <PixelEffect pixelSize={5} />
     </Canvas>
   );
 }
