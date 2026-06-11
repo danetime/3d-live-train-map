@@ -207,44 +207,61 @@ function extract(direction) {
   if (direction === "up") chain = [...chain].reverse();
 
   const graph = graphFor(direction);
-  const out = []; // { berth, stanox, miles (decimal), anchorCrs? , platform? }
-  let missingAnchors = [];
 
-  for (let i = 0; i < chain.length - 1; i++) {
-    const a = chain[i];
-    const b = chain[i + 1];
-    const sa = crsToStanox.get(a.crs);
-    const sb = crsToStanox.get(b.crs);
-    if (!sa || !sb) {
-      missingAnchors.push(!sa ? a.crs : b.crs);
-      continue;
-    }
-    const path = shortestPath(graph, sa, sb);
-    if (!path) {
-      console.warn(`[berths] ${direction}: no berth path found ${a.crs} → ${b.crs} (area ${AREA})`);
-      continue;
-    }
-    // Interpolate mileage across the segment (linear by step index).
+  // Only anchor on stations that actually report a berth — otherwise a station
+  // with no berth (e.g. Marsh Barton, a new station) breaks the BFS before it
+  // can walk the intermediate signal berths. Pathing EXT → Dawlish Warren
+  // directly, skipping the berth-less stations, collects the sea-wall berths
+  // in between.
+  const stanoxHasBerth = new Set([...berthInfo.values()].map((v) => v.stanox));
+  const survivors = chain
+    .map((a) => ({ ...a, stanox: crsToStanox.get(a.crs) }))
+    .filter((a) => a.stanox && stanoxHasBerth.has(a.stanox));
+  const dropped = chain
+    .filter((a) => {
+      const s = crsToStanox.get(a.crs);
+      return !s || !stanoxHasBerth.has(s);
+    })
+    .map((a) => a.crs);
+  if (dropped.length) {
+    console.log(`[berths] ${direction}: skipped (no berth in area ${AREA}): ${dropped.join(", ")}`);
+  }
+
+  const out = []; // { berth, stanox, miles (decimal), location, platform }
+  const add = (berth, miles) => {
+    if (out.some((o) => o.berth === berth)) return; // global de-dup
+    const info = berthInfo.get(berth);
+    out.push({
+      berth,
+      stanox: info?.stanox,
+      crs: info ? stanoxToCrs.get(info.stanox) : undefined,
+      location: info ? stanoxName.get(info.stanox) : undefined,
+      platform: info?.platform,
+      miles,
+    });
+  };
+  const berthAt = (stanox) =>
+    [...berthInfo.entries()].find(([, v]) => v.stanox === stanox)?.[0];
+
+  for (let i = 0; i < survivors.length - 1; i++) {
+    const a = survivors[i];
+    const b = survivors[i + 1];
     const mA = dec(a);
     const mB = dec(b);
+    const path = shortestPath(graph, a.stanox, b.stanox);
+    if (!path) {
+      // Keep the station berths even when the in-between chain is missing.
+      console.warn(`[berths] ${direction}: no berth path ${a.crs} → ${b.crs} — keeping station berths only`);
+      const ab = berthAt(a.stanox);
+      const bb = berthAt(b.stanox);
+      if (ab) add(ab, mA);
+      if (bb) add(bb, mB);
+      continue;
+    }
     path.forEach((berth, idx) => {
       const f = path.length === 1 ? 0 : idx / (path.length - 1);
-      const miles = mA + (mB - mA) * f;
-      // Segment joints would duplicate the anchor berth — keep the first only.
-      if (out.length && out[out.length - 1].berth === berth) return;
-      const info = berthInfo.get(berth);
-      out.push({
-        berth,
-        stanox: info?.stanox,
-        crs: info ? stanoxToCrs.get(info.stanox) : undefined,
-        location: info ? stanoxName.get(info.stanox) : undefined,
-        platform: info?.platform,
-        miles,
-      });
+      add(berth, mA + (mB - mA) * f);
     });
-  }
-  if (missingAnchors.length) {
-    console.warn(`[berths] ${direction}: anchors missing from CORPUS: ${missingAnchors.join(", ")}`);
   }
   return out;
 }
