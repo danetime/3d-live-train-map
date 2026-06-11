@@ -2,8 +2,9 @@
  * PixelLab asset generator for the iso spike.
  *
  * Usage:
- *   PIXELLAB_API_TOKEN=xxx node scripts/pixellab.mjs            # balance only
- *   PIXELLAB_API_TOKEN=xxx node scripts/pixellab.mjs --generate # make tiles
+ *   PIXELLAB_API_TOKEN=xxx node scripts/pixellab.mjs                    # balance only
+ *   PIXELLAB_API_TOKEN=xxx node scripts/pixellab.mjs --generate        # make every tile
+ *   PIXELLAB_API_TOKEN=xxx node scripts/pixellab.mjs --generate train  # only named tile(s)
  *
  * Talks to the PixelLab REST API directly with fetch. We deliberately do *not*
  * use the @pixellab-code/pixellab SDK for generation: its pinned response
@@ -62,23 +63,44 @@ if (!process.argv.includes("--generate")) {
   process.exit(0);
 }
 
-// --- 2) generate a small iso asset set ------------------------------------
+// --- 2) generate the iso asset set ----------------------------------------
+// Each tile defaults to one 64px iso cell; `size` overrides it for bigger
+// landmarks (the spike draws cells 64px wide, so width ÷ 64 ≈ tiles across).
 const SIZE = { width: 64, height: 64 };
 const jobs = [
   { name: "station", description: "small isometric railway station building, pixel art" },
   { name: "train", description: "isometric blue commuter train carriage, pixel art" },
   { name: "tree", description: "isometric green tree, pixel art" },
+  {
+    name: "exeter_st_davids",
+    description:
+      "isometric pixel art of a grand Victorian railway station, long pale stone " +
+      "frontage with rows of tall arched windows, a central gabled clock tower, a " +
+      "glass-and-iron platform canopy and a grey slate roof",
+    size: { width: 256, height: 192 }, // ~4 tiles wide
+  },
 ];
 
+// Optionally restrict to named assets (everything after --generate that isn't a
+// flag), so we don't re-spend credits regenerating tiles we already have.
+const names = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const toRun = names.length ? jobs.filter((j) => names.includes(j.name)) : jobs;
+if (toRun.length === 0) {
+  console.error(`no matching assets for: ${names.join(", ")}`);
+  console.error(`known: ${jobs.map((j) => j.name).join(", ")}`);
+  process.exit(3);
+}
+
 await mkdir(outDir, { recursive: true });
-for (const job of jobs) {
-  process.stdout.write(`generating ${job.name}... `);
+for (const job of toRun) {
+  const size = job.size ?? SIZE;
+  process.stdout.write(`generating ${job.name} (${size.width}×${size.height})... `);
   const data = await api("/generate-image-pixflux", {
     method: "POST",
     headers: { ...authHeaders, "Content-Type": "application/json" },
     body: JSON.stringify({
       description: job.description,
-      image_size: SIZE,
+      image_size: size,
       isometric: true,
       no_background: true,
     }),
