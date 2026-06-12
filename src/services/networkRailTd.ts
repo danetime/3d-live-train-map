@@ -10,7 +10,7 @@ import type { Train } from "../data/types";
 import { berthPosition, berthLatLng } from "../data/berths";
 import { berthMileagePosition } from "../data/berthMileages";
 import { LINE_BY_ID } from "../data/network";
-import { destinationForHeadcode } from "./headcodeDestinations";
+import { destinationForHeadcode, operatorForHeadcode } from "./headcodeDestinations";
 
 const WS_URL = (import.meta.env.VITE_TD_WS_URL as string) || "ws://localhost:4001";
 
@@ -52,7 +52,7 @@ export function connectTdFeed(
         id,
         lineId: pos.lineId,
         headcode: r.headcode,
-        operator: "",
+        operator: operatorForHeadcode(r.headcode) ?? "",
         t: pos.t,
         direction,
         speed: 0, // externally positioned; Train.tsx eases between berths

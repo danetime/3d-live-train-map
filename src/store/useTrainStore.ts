@@ -2,7 +2,9 @@ import { create } from "zustand";
 import type { Train } from "../data/types";
 
 export type DataSource = "sim" | "live";
-export type Theme = "signal" | "land";
+/** "dev" = the dark signalling-diagram view (black + wireframe); "land" = the
+ *  low-poly landscape. Dev mode is the default and our stable bug-fixing view. */
+export type Theme = "dev" | "land";
 
 export type SelectedSignal = {
   /** Signal number, e.g. "E218". */
@@ -49,8 +51,8 @@ export const useTrainStore = create<TrainStore>((set) => ({
   selectedId: null,
   dataSource: "sim",
   setDataSource: (dataSource) => set({ dataSource }),
-  theme: "signal",
-  toggleTheme: () => set((s) => ({ theme: s.theme === "signal" ? "land" : "signal" })),
+  theme: "dev",
+  toggleTheme: () => set((s) => ({ theme: s.theme === "dev" ? "land" : "dev" })),
   setTrains: (trains) => set({ trains }),
   advance: (updates) =>
     set((state) => {

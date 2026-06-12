@@ -14,6 +14,7 @@
  * Docs: https://api-portal.rtt.io/  ·  https://www.realtimetrains.co.uk/about/developer/
  */
 import type { Train } from "../data/types";
+import type { HeadcodeInfo } from "./headcodeDestinations";
 import { STATIONS, LINES } from "../data/network";
 import { lineStopParams } from "../data/lineCurves";
 
@@ -45,6 +46,7 @@ type RttSearchService = {
   isPassenger?: boolean;
   serviceType?: string;
   trainIdentity?: string;
+  atocCode?: string;
   locationDetail?: { destination?: RttPair[] };
 };
 
@@ -186,17 +188,18 @@ export function mapServiceToTrain(detail: RttServiceDetail): Train | null {
 // ---- Public entry points ----
 
 /**
- * Build a `headcode → real destination` map from a single RTT search at Exeter.
- * Used to enrich the TD feed (which has headcodes but no destinations). One
- * request, so it's fair-use friendly enough to poll alongside the TD feed.
+ * Build a `headcode → { destination, operator }` map from a single RTT search at
+ * Exeter. Used to enrich the TD feed (which has headcodes but no destination or
+ * operator). One request, so it's fair-use friendly enough to poll alongside it.
  */
-export async function fetchHeadcodeDestinations(): Promise<Map<string, string>> {
+export async function fetchHeadcodeInfo(): Promise<Map<string, HeadcodeInfo>> {
   const search = await getJson<RttSearchResponse>(`${BASE}/search/EXD`);
-  const map = new Map<string, string>();
+  const map = new Map<string, HeadcodeInfo>();
   for (const s of search.services ?? []) {
     const code = s.trainIdentity;
+    if (!code) continue;
     const dest = s.locationDetail?.destination?.[0]?.description;
-    if (code && dest) map.set(code, dest);
+    if (dest || s.atocCode) map.set(code, { dest, toc: s.atocCode });
   }
   return map;
 }

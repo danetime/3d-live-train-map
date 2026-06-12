@@ -68,7 +68,7 @@ function Track({ line, index, signal }: { line: Line; index: number; signal: boo
 }
 
 export function RailNetwork() {
-  const signal = useTrainStore((s) => s.theme) === "signal";
+  const signal = useTrainStore((s) => s.theme) === "dev";
   return (
     <group>
       {LINES.map((line, i) => (

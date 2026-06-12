@@ -193,7 +193,7 @@ export function Train({ train }: { train: TrainModel }) {
   const placed = useRef(false);
 
   const selectedId = useTrainStore((s) => s.selectedId);
-  const signal = useTrainStore((s) => s.theme) === "signal";
+  const signal = useTrainStore((s) => s.theme) === "dev";
   const detailLevel = useTrainStore((s) => s.detailLevel);
   const advance = useTrainStore((s) => s.advance);
   const select = useTrainStore((s) => s.select);

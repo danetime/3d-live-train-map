@@ -1,6 +1,7 @@
 /** 2D overlay: title, line legend, live service list and selected-train panel. */
 import { LINES, LINE_BY_ID } from "../data/network";
 import { useTrainStore } from "../store/useTrainStore";
+import { operatorName, inferStock } from "../data/rollingStock";
 
 export function Hud() {
   const trains = useTrainStore((s) => s.trains);
@@ -8,12 +9,15 @@ export function Hud() {
   const select = useTrainStore((s) => s.select);
   const dataSource = useTrainStore((s) => s.dataSource);
   const feedCount = useTrainStore((s) => s.feedCount);
+  const theme = useTrainStore((s) => s.theme);
+  const toggleTheme = useTrainStore((s) => s.toggleTheme);
 
   const selectedSignal = useTrainStore((s) => s.selectedSignal);
   const selectSignal = useTrainStore((s) => s.selectSignal);
   const signalAspect = useTrainStore((s) => s.signalAspect);
 
   const selected = trains.find((t) => t.id === selectedId) ?? null;
+  const stock = selected ? inferStock(selected) : null;
   const live = dataSource === "live";
   const signalLine = selectedSignal ? LINE_BY_ID.get(selectedSignal.lineId) : null;
 
@@ -23,6 +27,9 @@ export function Hud() {
         <h1>
           🚆 Exeter Live
           <span className={`badge ${live ? "live" : "sim"}`}>{live ? "LIVE" : "SIM"}</span>
+          <button className="mode-toggle" onClick={toggleTheme} title="Switch view">
+            {theme === "dev" ? "🛠 Dev Mode" : "🗺 Map Mode"}
+          </button>
         </h1>
         <p className="subtitle">
           {live
@@ -71,7 +78,8 @@ export function Hud() {
             />
             <div>
               <strong>
-                {selected.operator} {selected.headcode}
+                {selected.operator ? `${operatorName(selected.operator)} ` : ""}
+                {selected.headcode}
               </strong>
               <div className="muted">{LINE_BY_ID.get(selected.lineId)!.name}</div>
             </div>
@@ -94,6 +102,14 @@ export function Hud() {
                 · platform <strong>{selected.platform}</strong>
               </>
             )}
+            <div className="muted stock">
+              {selected.operator ? operatorName(selected.operator) : "Operator unknown"}
+              {stock && (
+                <>
+                  {" · "}est. <strong>{stock.unit}</strong> · {stock.cars}
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -129,7 +145,7 @@ export function Hud() {
       )}
 
       <div className="hint">
-        Drag to orbit · two-finger / right-drag to pan · zoom in for detail · tap a train or signal
+        Drag to pan · right-drag / two-finger to rotate · scroll to zoom · tap a train or signal
       </div>
     </>
   );
