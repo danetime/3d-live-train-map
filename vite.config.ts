@@ -25,6 +25,13 @@ export default defineConfig(({ mode }) => {
             proxy.on("proxyReq", (proxyReq) => {
               if (auth) proxyReq.setHeader("Authorization", auth);
             });
+            // If RTT creds aren't set the upstream replies 401 with a
+            // WWW-Authenticate header, which makes the browser pop its native
+            // Basic-auth sign-in box. Strip that header so the client just sees
+            // a plain 401 and falls back quietly (no destination enrichment).
+            proxy.on("proxyRes", (proxyRes) => {
+              delete proxyRes.headers["www-authenticate"];
+            });
           },
         },
       },
