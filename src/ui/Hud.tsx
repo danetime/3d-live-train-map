@@ -106,8 +106,21 @@ export function Hud() {
               {selected.operator ? operatorName(selected.operator) : "Operator unknown"}
               {stock && (
                 <>
-                  {" · "}est. <strong>{stock.unit}</strong> · {stock.cars}
+                  {" · "}
+                  {!stock.live && "est. "}
+                  <strong>{stock.unit}</strong> · {stock.cars}
+                  {stock.live && " (live)"}
                 </>
+              )}
+              {!stock && selected.formation && (
+                <>
+                  {" · "}
+                  {selected.formation.coaches} cars (live)
+                </>
+              )}
+              {selected.formation?.first ? <> · {selected.formation.first}× First</> : null}
+              {selected.formation?.loading != null && (
+                <> · ~{selected.formation.loading}% full</>
               )}
             </div>
           </div>

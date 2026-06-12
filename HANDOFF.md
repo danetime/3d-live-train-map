@@ -15,7 +15,7 @@ red/green aspects.
 
 **Stack**
 - **Client:** React 18 + `@react-three/fiber` / `drei` (Three.js), Vite, TypeScript, Zustand store.
-- **Server:** Node (ESM) bridge in `/server` — subscribes to Network Rail STOMP feeds and fans out train snapshots to the browser over a WebSocket.
+- **Server:** Node (ESM) bridge in `/server` — subscribes to the Network Rail STOMP feed (TD berths) and optionally the Darwin Kafka feed (formations, §9), and fans out enriched train snapshots to the browser over a WebSocket.
 - **Data scripts:** Node scripts under `/server/scripts` that download Network Rail reference/feed files and bake lookup tables into `/src/data`.
 
 **Two ways trains can be sourced** (`src/sim/useTrainFeed.ts`):
@@ -76,6 +76,8 @@ npm run schedule       # builds data/headcodeSchedule.generated.json (headcode�
 | Store | `src/store/useTrainStore.ts` |
 | Server entry | `server/index.js` |
 | Server schedule loader | `server/lib/schedule.js` |
+| Darwin Kafka consumer | `server/lib/darwinClient.js` |
+| Darwin formation state + correlation | `server/lib/darwinState.js` |
 | Berth generator | `server/scripts/buildAllBerths.js` |
 | Schedule generator | `server/scripts/buildSchedule.js` |
 
@@ -256,18 +258,63 @@ using the Network Rail **SCHEDULE (CIF)** feed the user already has access to.
 - CrossCountry → Class 220/221 Voyager (4–5 cars)
 - SWR → Class 158/159 (3 cars)
 
-**Hard truth:** the **exact unit class** ("Class 800") and **unit number**
-("802006") are **not in any open feed** — not RTT, NR, or Darwin. Only an
-inference is possible.
+**Hard truth:** the **unit number** ("802006") is **not in any open feed** — and
+the unit class is never named either; but with Darwin's real coach count the
+class inference becomes near-certain (9-car GWR main line ⇒ IET).
 
-**NEXT BUILD — Darwin formations (the user chose: signals first, then Darwin):**
-Darwin (National Rail, free via the Rail Data Marketplace; STOMP push port like
-the NR feed) provides **real carriage counts, First/Standard split, and live
-loading**. That replaces the estimated car count with the true number and makes
-the class inference near-certain (e.g. confirmed 9-car GWR main line ⇒ Class
-800/802). Build = register, consume the push port, parse formation messages,
-correlate to our trains by service RID/headcode. Coverage good for GWR, patchier
-elsewhere.
+### Darwin formations — BUILT (awaiting first live run)
+
+**Transport reality check (the old §9 was wrong):** the Rail Data Marketplace
+serves Darwin over **Kafka + JSON only — there is no STOMP option** (STOMP/XML
+was the legacy National Rail feed). Confirmed from the official client repo
+(`raildatamarketplace/rdm-darwin-kafka-client`): SASL_SSL, mechanism **PLAIN**,
+username/password = the subscription's **Consumer key/secret**, message value =
+UTF-8 JSON envelope with the Pport message nested as a JSON **string** in its
+`bytes` field.
+
+**Server** (all optional — without `DARWIN_*` env everything runs as before):
+- `server/lib/darwinClient.js` — kafkajs consumer (lazy-imported like stompit;
+  non-blocking at boot; throttled one-line kafka errors). Defensive decode:
+  `bytes`-JSON, base64, gzip, and raw-XML detection. `DARWIN_DEBUG=1` saves the
+  first raw messages (+ first scheduleFormations/formationLoading) to
+  `server/data/darwinSamples/` for wire-shape inspection.
+- `server/lib/darwinState.js` — parses Pport-as-JSON with tolerant helpers
+  (`attr`/`textOf`/`collectDeep` accept plain/`@`/`@_`/`$`-bag conventions since
+  RDM's XML→JSON conversion is undocumented). Tracks per-RID records; correlates
+  RID→headcode two ways: Darwin `schedule.trainId` directly, and `TS.uid` → CIF
+  UID → headcode (works for trains already running at startup). Scores
+  candidates when an all-UK headcode collides (today's ssd, TOC match, has
+  data). Coach count falls back to counting `formationLoading` coaches when no
+  `scheduleFormations` was seen. Checkpoints formation/loading records to
+  `server/data/darwinState.generated.json` every minute (Darwin only re-sends on
+  change, so restarts must not forget).
+- `buildSchedule.js` now writes `uid` per working and `schedule.js` exposes
+  `headcodeForUid`/`tocFor`/`has` — **re-run `npm run schedule` once** so the
+  table gains UIDs.
+- `index.js` attaches `formation: { coaches, first?, loading?, src: "darwin" }`
+  to every matched train in the WS feed and logs a `[darwin]` summary line every
+  30 s (message mix · rids · on-patch headcodes · attached/tracked) — that's the
+  line to paste back.
+
+**Client:** `Train.formation` (types.ts) flows through `networkRailTd.ts`;
+`inferStock()` (rollingStock.ts) sharpens the class from a live count (4 ⇒ 220,
+5 ⇒ 221, 9 ⇒ IET, 10 ⇒ 2× IET, short GWR "express" ⇒ actually a Sprinter) and
+the panel (Hud.tsx) drops "est.", marks "(live)", and shows `n× First` and
+`~NN% full` when present.
+
+**User setup (on the Mac):** subscribe (free) to "Darwin Real Time Train
+Information (PubSub)" at <https://raildata.org.uk> → copy the connection values
+into `server/.env` (`DARWIN_BROKERS/USERNAME/PASSWORD/TOPIC`, see
+`.env.example`) → `cd server && npm install` → `npm run schedule` → `npm run
+live`, first time ideally with `DARWIN_DEBUG=1`. Paste back the `[darwin]`
+lines and one file from `data/darwinSamples/` so the parser can be tightened
+against the real wire shape.
+
+**Open:** exact RDM JSON field conventions unverified until that first run (the
+parser is deliberately convention-tolerant); `DARWIN_OFFSET=earliest` would
+replay the all-UK backlog to catch overnight formation messages (heavy — default
+`latest` relies on intra-day formation/loading traffic, which GWR sends
+constantly). Coverage good for GWR, patchier elsewhere.
 
 ---
 
@@ -290,9 +337,10 @@ elsewhere.
 
 ## 11. Conventions & workflow
 
-- **Branch:** `claude/train-tracking-3d-app-jrr3lr`. Develop here, commit with
-  clear messages, push (`git push -u origin <branch>`). Do **not** open PRs unless
-  asked.
+- **Branch:** `claude/nifty-goldberg-1ubft1` (continues from
+  `claude/train-tracking-3d-app-jrr3lr`). Develop on the session's designated
+  branch, commit with clear messages, push (`git push -u origin <branch>`). Do
+  **not** open PRs unless asked.
 - **CI gate:** keep `npm run build` (`tsc -b && vite build`) green before pushing.
 - **The user runs the live feed + big downloads on their own Mac** and pastes the
   summary lines; iterate from there. The dev container cannot reach the live feed.
@@ -302,7 +350,10 @@ elsewhere.
 
 ## 12. Open items / TODO (priority-ish)
 
-1. **Darwin formations** — accurate carriage counts (the agreed next build, §9).
+1. **Darwin formations — built; verify against the live feed** (§9): user
+   registers on raildata.org.uk, fills `DARWIN_*` in `server/.env`, re-runs
+   `npm run schedule` (UIDs), runs `npm run live` with `DARWIN_DEBUG=1`, pastes
+   the `[darwin]` lines + a `darwinSamples/` file; tighten the parser from that.
 2. **Taunton & Exmouth signals** — still eyeballed; transcribe real numbers + drop
    their synthetic fill (§6).
 4. **Second TD area (Plymouth panel)** — to light up Plymouth/Ivybridge and

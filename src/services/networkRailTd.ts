@@ -6,15 +6,22 @@
  * layer. Trains with berths we haven't mapped yet are skipped (and counted, so
  * you can see how many are waiting to be mapped). Reconnects automatically.
  */
-import type { Train } from "../data/types";
+import type { Train, TrainFormation } from "../data/types";
 import { berthPosition, berthLatLng } from "../data/berths";
 import { berthMileagePosition } from "../data/berthMileages";
 import { LINE_BY_ID } from "../data/network";
 
 const WS_URL = (import.meta.env.VITE_TD_WS_URL as string) || "ws://localhost:4001";
 
-// `toc`/`dest` are attached server-side from the Network Rail schedule.
-type RawTrain = { headcode: string; area: string; berth: string; toc?: string; dest?: string };
+// `toc`/`dest` (NR schedule) and `formation` (Darwin) are attached server-side.
+type RawTrain = {
+  headcode: string;
+  area: string;
+  berth: string;
+  toc?: string;
+  dest?: string;
+  formation?: TrainFormation;
+};
 
 /** Connect to the bridge. Returns a disconnect function. */
 export function connectTdFeed(
@@ -62,6 +69,7 @@ export function connectTdFeed(
           r.dest ?? (direction === 1 ? line?.destination ?? "" : "Exeter St David's"),
         berth: r.berth,
         platform: exact?.platform,
+        formation: r.formation,
         // No `pos`: even with exact coordinates we ride the spline (berthLatLng
         // already computed the nearest on-line t). Raw lat/lng sits slightly
         // off the drawn track and skips the double-track rail offset.
