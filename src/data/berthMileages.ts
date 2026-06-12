@@ -38,8 +38,12 @@ export const BERTH_MILEAGES: Record<string, BerthMileage> = {
   //     reports berths only at the stations on the open line, so a train keeps
   //     its rail while it eases between them.
   // DOWN — Exeter → Teignmouth
+  // Exeter St David's down signals, one per platform end (local knowledge).
+  "EX:E160": { line: "newton-abbot", miles: 173, chains: 56, dir: 1 }, // Exeter St David's P1
+  "EX:E260": { line: "newton-abbot", miles: 173, chains: 56, dir: 1 }, // Exeter St David's P3
+  "EX:E060": { line: "newton-abbot", miles: 173, chains: 56, dir: 1 }, // Exeter St David's P4 (id E60/E060?)
   "EX:E360": { line: "newton-abbot", miles: 173, chains: 56, dir: 1 }, // Exeter St David's P5
-  "EX:E460": { line: "newton-abbot", miles: 173, chains: 56, dir: 1 }, // Exeter St David's P6 (down end-of-platform signal)
+  "EX:E460": { line: "newton-abbot", miles: 173, chains: 56, dir: 1 }, // Exeter St David's P6
   "EX:E062": { line: "newton-abbot", miles: 174, chains: 32, dir: 1 }, // Exeter St Thomas P1
   "EX:E072": { line: "newton-abbot", miles: 184, chains: 24, dir: 1 }, // Dawlish Warren P1
   "EX:D206": { line: "newton-abbot", miles: 185, chains: 64, dir: 1 }, // Dawlish P1
