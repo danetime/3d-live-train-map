@@ -13,7 +13,9 @@
     "berths:mainline": "node --env-file=.env scripts/extractMainLineBerths.js",
     "berths:mainline:sample": "node scripts/extractMainLineBerths.js --sample --direction up --chain CDF,EXD",
     "berths:all": "node --env-file=.env scripts/buildAllBerths.js",
-    "berths:all:sample": "node scripts/buildAllBerths.js --sample"
+    "berths:all:sample": "node scripts/buildAllBerths.js --sample",
+    "schedule": "node --env-file=.env scripts/buildSchedule.js",
+    "schedule:sample": "node scripts/buildSchedule.js --sample"
   },
   "dependencies": {
     "stompit": "^1.0.0",
