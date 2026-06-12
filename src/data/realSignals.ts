@@ -66,6 +66,42 @@ const DATA: Record<string, RealSig[]> = {
     { id: "E84", dir: 1, at: 193.4 },
     { id: "E86", dir: 1, at: 193.7 },
     { id: "E88", dir: 1, at: 194.0 }, // Newton Abbot — Down Main
+    // --- UP direction, Newton Abbot → St David's ---
+    { id: "E188", dir: -1, at: 193.93 }, // Newton Abbot — Up/Down Relief
+    { id: "E388", dir: -1, at: 193.95 }, // Newton Abbot — Up Main
+    { id: "E11", dir: -1, at: 193.97 }, //  Newton Abbot P3 — Up Main
+    { id: "E211", dir: 1, at: 194.03 }, //  Newton Abbot P2 — Down Main
+    { id: "E311", dir: -1, at: 193.91 }, // Newton Abbot P1 — Up/Down Relief
+    { id: "E13", dir: -1, at: 193.7 },
+    { id: "UM212", dir: -1, at: mp(212) },
+    { id: "UM211", dir: -1, at: mp(211) },
+    { id: "UM210", dir: -1, at: mp(210) },
+    { id: "E15", dir: -1, at: 188.8 },
+    { id: "UM208", dir: -1, at: mp(208) }, // listed "UN208" — read as UM208
+    { id: "UM207", dir: -1, at: mp(207) },
+    { id: "UM206", dir: -1, at: mp(206) }, // Dawlish
+    { id: "E17", dir: -1, at: 185.3 },
+    { id: "E19", dir: -1, at: 184.9 },
+    { id: "E21", dir: -1, at: 184.6 },
+    { id: "E23", dir: -1, at: 184.3 }, //  Dawlish Warren — Up Main
+    { id: "E123", dir: -1, at: 184.33 }, // Dawlish Warren — Up Loop
+    { id: "E25", dir: -1, at: 183.5 },
+    { id: "UM202", dir: -1, at: mp(202) }, // Starcross
+    { id: "UM201", dir: -1, at: mp(201) },
+    { id: "UM200", dir: -1, at: mp(200) },
+    { id: "UM199", dir: -1, at: mp(199) },
+    { id: "UM197", dir: -1, at: mp(197) },
+    { id: "UM196", dir: -1, at: mp(196) }, // Marsh Barton
+    { id: "E31", dir: -1, at: 174.8 },
+    { id: "E33", dir: -1, at: 174.4 }, //  Exeter St Thomas P2
+    { id: "E35", dir: -1, at: 173.95 }, // Exeter St David's home signal
+    // St David's up-end platform starters (fanned; junction throat).
+    { id: "E137", dir: -1, at: 173.7 }, //  P6
+    { id: "E37", dir: -1, at: 173.68 }, //  P5
+    { id: "E237", dir: -1, at: 173.66 }, // P4
+    { id: "E337", dir: -1, at: 173.64 }, // P3
+    { id: "E437", dir: -1, at: 173.62 }, // P1
+    { id: "E537", dir: -1, at: 173.6 }, //  P2 (bay)
   ],
   // Torbay branch — DOWN direction, Newton Abbot → Paignton (drawn from NTA).
   paignton: [
@@ -77,6 +113,13 @@ const DATA: Record<string, RealSig[]> = {
     { id: "PN1", dir: 1, at: 200.0 }, //  Paignton platforms
     { id: "PN3", dir: 1, at: 200.02 },
     { id: "PN7", dir: 1, at: 200.04 },
+    // --- UP direction, Paignton → Newton Abbot ---
+    { id: "PN4", dir: -1, at: 200.05 }, // Paignton P2
+    { id: "UT220", dir: -1, at: mp(220) },
+    { id: "UT219", dir: -1, at: mp(219) }, // Torquay P2
+    { id: "UT218", dir: -1, at: mp(218) }, // Torre
+    { id: "E109R", dir: -1, at: 194.6 }, // Aller — repeater
+    { id: "E109", dir: -1, at: 194.3 }, //  Aller
   ],
   // Taunton main line — Cowley Bridge Jn (eyeballed; pending transcription).
   taunton: [
