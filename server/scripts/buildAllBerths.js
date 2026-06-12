@@ -141,10 +141,14 @@ for (const r of smartRows) {
 const out = {};
 let mapped = 0;
 const byStation = {};
+const leftover = new Map(); // resolved CRS we don't (yet) map → berth count
 for (const [berth, info] of berthInfo) {
   const crs = stanoxToCrs.get(info.stanox);
   const st = crs && STATION[crs];
-  if (!st) continue; // not one of our network stations — skip
+  if (!st) {
+    if (crs) leftover.set(crs, (leftover.get(crs) || 0) + 1);
+    continue; // not one of our network stations — skip
+  }
   let dir;
   const v = votes.get(berth);
   if (v && v.down !== v.up) {
@@ -160,3 +164,7 @@ mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(out, null, 2) + "\n");
 console.log(`[berths] mapped ${mapped} berths across ${Object.keys(byStation).length} stations → ${OUT}`);
 console.log("[berths] per station:", Object.entries(byStation).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c}:${n}`).join("  "));
+// Audit: EX-area berths that resolved to a real CRS we don't map. These are the
+// candidates worth adding to STATION (Marsh Barton, etc.) — sorted by berth count.
+const leftoverList = Object.entries(Object.fromEntries(leftover)).sort((a, b) => b[1] - a[1]);
+console.log(`[berths] unmapped CRS (${leftoverList.length}):`, leftoverList.map(([c, n]) => `${c}:${n}`).join("  ") || "(none)");
