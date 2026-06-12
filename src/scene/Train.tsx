@@ -5,7 +5,7 @@ import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
 import type { Train as TrainModel } from "../data/types";
 import { LINE_BY_ID } from "../data/network";
-import { lineCurve, branchOffset } from "../data/lineCurves";
+import { lineCurve, branchOffset, lineStopParams } from "../data/lineCurves";
 import { project } from "../data/geo";
 import { GAUGE } from "./RailNetwork";
 import { useTrainStore } from "../store/useTrainStore";
@@ -250,9 +250,19 @@ export function Train({ train }: { train: TrainModel }) {
       curve.getPointAt(t, pos);
       curve.getTangentAt(t, tangent); // raw tangent
       const dir = dirRef.current;
-      // Double-track lines: ride the rail for the current direction. Branch
-      // lines: follow the same lateral peel-off as the drawn track.
-      const lat = line.doubleTrack ? GAUGE * dir : branchOffset(line, t);
+      // Double-track lines ride the rail for the current direction. A branch
+      // that shares the double-track trunk (the Riviera line, Exeter→Newton
+      // Abbot) also rides the trunk's up/down rail until it peels off at its
+      // branch stop; beyond that it follows the single-track centreline.
+      let lat: number;
+      if (line.doubleTrack) {
+        lat = GAUGE * dir;
+      } else if (line.drawFrom) {
+        const tBranch = lineStopParams(line.id)[line.stops.indexOf(line.drawFrom)];
+        lat = t < tBranch ? GAUGE * dir : branchOffset(line, t);
+      } else {
+        lat = 0;
+      }
       if (lat !== 0) {
         pos.x += tangent.z * lat;
         pos.z += -tangent.x * lat;
