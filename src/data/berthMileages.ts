@@ -39,6 +39,7 @@ export const BERTH_MILEAGES: Record<string, BerthMileage> = {
   //     its rail while it eases between them.
   // DOWN — Exeter → Teignmouth
   "EX:E360": { line: "newton-abbot", miles: 173, chains: 56, dir: 1 }, // Exeter St David's P5
+  "EX:E460": { line: "newton-abbot", miles: 173, chains: 56, dir: 1 }, // Exeter St David's P6 (down end-of-platform signal)
   "EX:E062": { line: "newton-abbot", miles: 174, chains: 32, dir: 1 }, // Exeter St Thomas P1
   "EX:E072": { line: "newton-abbot", miles: 184, chains: 24, dir: 1 }, // Dawlish Warren P1
   "EX:D206": { line: "newton-abbot", miles: 185, chains: 64, dir: 1 }, // Dawlish P1
