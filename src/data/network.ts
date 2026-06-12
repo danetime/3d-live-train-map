@@ -238,7 +238,7 @@ export const LINE_MILEAGES: Record<string, number[]> = {
   "newton-abbot": [
     mc(173, 56), // EXD
     mc(174, 32), // EXT  Exeter St Thomas
-    mc(175, 8),  // MRB  Marsh Barton
+    mc(175, 64), // MRB  Marsh Barton (196m via Bristol − 20m16ch offset)
     mc(181, 40), // SCS  Starcross
     mc(184, 24), // DWW  Dawlish Warren
     mc(185, 64), // DWL  Dawlish
@@ -252,7 +252,7 @@ export const LINE_MILEAGES: Record<string, number[]> = {
   paignton: [
     mc(173, 56), // EXD
     mc(174, 32), // EXT
-    mc(175, 8),  // MRB
+    mc(175, 64), // MRB
     mc(181, 40), // SCS
     mc(184, 24), // DWW
     mc(185, 64), // DWL
