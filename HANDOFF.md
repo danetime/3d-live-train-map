@@ -193,10 +193,9 @@ eyeballed up guesses E35-old/E33-old/E31-old, E109R-old, UT218/UT219-old).
 signals and must not show a main aspect. If new lists include them, flag and drop.
 
 ### OPEN SIGNAL QUESTIONS
-1. **Newton Abbot has two trios** with matching descriptions: down-list
-   E88/E188/E388 and up-list E211/E11/E311 (each = Down Main / Up Main / Relief).
-   **Unconfirmed whether these are six distinct signals or the same three
-   described twice.** Awaiting the user; prune to one set if duplicates.
+1. **Newton Abbot — RESOLVED:** six distinct signals, three at each platform end
+   (~20ch apart). **East/Exeter end** = E11/E211/E311 (~193.88), **West/Plymouth
+   end** = E88/E188/E388 (~194.12).
 2. **St David's up-end platform starters** (E137…E537) are placed just south of
    EXD on the up rail — the single-spline-per-route model can't route them up the
    Taunton junction throat. Cosmetic; revisit if it reads oddly.
@@ -304,9 +303,7 @@ elsewhere.
 ## 12. Open items / TODO (priority-ish)
 
 1. **Darwin formations** — accurate carriage counts (the agreed next build, §9).
-2. **Newton Abbot signal trios** — confirm whether E88/E188/E388 vs E11/E211/E311
-   are duplicates; prune if so (§6).
-3. **Taunton & Exmouth signals** — still eyeballed; transcribe real numbers + drop
+2. **Taunton & Exmouth signals** — still eyeballed; transcribe real numbers + drop
    their synthetic fill (§6).
 4. **Second TD area (Plymouth panel)** — to light up Plymouth/Ivybridge and
    extend coverage (§7).

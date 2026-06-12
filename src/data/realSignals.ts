@@ -65,13 +65,14 @@ const DATA: Record<string, RealSig[]> = {
     { id: "DM212", dir: 1, at: mp(212) },
     { id: "E84", dir: 1, at: 193.4 },
     { id: "E86", dir: 1, at: 193.7 },
-    { id: "E88", dir: 1, at: 194.0 }, // Newton Abbot — Down Main
+    { id: "E88", dir: 1, at: 194.1 }, // Newton Abbot W end (Plymouth) — Down Main
     // --- UP direction, Newton Abbot → St David's ---
-    { id: "E188", dir: -1, at: 193.93 }, // Newton Abbot — Up/Down Relief
-    { id: "E388", dir: -1, at: 193.95 }, // Newton Abbot — Up Main
-    { id: "E11", dir: -1, at: 193.97 }, //  Newton Abbot P3 — Up Main
-    { id: "E211", dir: 1, at: 194.03 }, //  Newton Abbot P2 — Down Main
-    { id: "E311", dir: -1, at: 193.91 }, // Newton Abbot P1 — Up/Down Relief
+    // Newton Abbot — three signals at each platform end (~20ch apart).
+    { id: "E188", dir: -1, at: 194.12 }, // W end (Plymouth) — Up/Down Relief
+    { id: "E388", dir: -1, at: 194.14 }, // W end (Plymouth) — Up Main
+    { id: "E11", dir: -1, at: 193.9 }, //   E end (Exeter) P3 — Up Main
+    { id: "E211", dir: 1, at: 193.88 }, //  E end (Exeter) P2 — Down Main
+    { id: "E311", dir: -1, at: 193.86 }, // E end (Exeter) P1 — Up/Down Relief
     { id: "E13", dir: -1, at: 193.7 },
     { id: "UM212", dir: -1, at: mp(212) },
     { id: "UM211", dir: -1, at: mp(211) },
