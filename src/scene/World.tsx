@@ -19,9 +19,10 @@ import { trainPositions } from "../sim/trainPositions";
 /**
  * Camera behaviour:
  * - Nothing selected → hands off: orbit, zoom and PAN freely anywhere.
- * - Train selected → fly to a top-down view of that train and follow it.
+ * - Train selected → ease into an oblique framing once, then FOLLOW the train
+ *   while leaving orbit/zoom fully under your control (no forced top-down).
  */
-const FOLLOW_OFFSET = new THREE.Vector3(0, 52, 9);
+const FOLLOW_OFFSET = new THREE.Vector3(0, 30, 42); // initial 3/4 view on select
 
 /** Map camera distance-to-target onto a detail level (0 far … 3 close). */
 function levelFor(d: number): number {
@@ -35,15 +36,41 @@ function CameraRig({ controls }: { controls: React.RefObject<OrbitControlsImpl> 
   const selectedId = useTrainStore((s) => s.selectedId);
   const setDetailLevel = useTrainStore((s) => s.setDetailLevel);
   const goal = useRef(new THREE.Vector3());
+  const follow = useRef(new THREE.Vector3()); // smoothed point we're tracking
+  const framingId = useRef<string | null>(null);
+  const framing = useRef(false);
 
   useFrame(({ camera }) => {
     const ctrl = controls.current;
     if (!ctrl) return;
     const target = selectedId ? trainPositions.get(selectedId) : null;
     if (target) {
-      ctrl.target.lerp(target, 0.08);
-      goal.current.copy(target).add(FOLLOW_OFFSET);
-      camera.position.lerp(goal.current, 0.06);
+      // New selection: start tracking from the current orbit centre and ease
+      // into a pleasant oblique framing once, then release control.
+      if (framingId.current !== selectedId) {
+        framingId.current = selectedId;
+        follow.current.copy(ctrl.target);
+        framing.current = true;
+      }
+      // Glide the tracked point toward the train and shift the camera by the
+      // SAME amount — so the train stays centred without ever resetting the
+      // angle or distance you've dialled in.
+      const px = follow.current.x;
+      const py = follow.current.y;
+      const pz = follow.current.z;
+      follow.current.lerp(target, 0.12);
+      camera.position.x += follow.current.x - px;
+      camera.position.y += follow.current.y - py;
+      camera.position.z += follow.current.z - pz;
+      ctrl.target.copy(follow.current);
+
+      if (framing.current) {
+        goal.current.copy(target).add(FOLLOW_OFFSET);
+        camera.position.lerp(goal.current, 0.07);
+        if (camera.position.distanceTo(goal.current) < 2) framing.current = false;
+      }
+    } else {
+      framingId.current = null;
     }
     setDetailLevel(levelFor(camera.position.distanceTo(ctrl.target)));
     ctrl.update();
@@ -124,6 +151,14 @@ export function World() {
         minDistance={12}
         maxDistance={600}
         maxPolarAngle={Math.PI / 2.15}
+        // One-finger / left-drag PANS the map (move position); right-drag (or
+        // two-finger) ROTATES; wheel / pinch zooms. Suits trackpad navigation.
+        mouseButtons={{
+          LEFT: THREE.MOUSE.PAN,
+          MIDDLE: THREE.MOUSE.DOLLY,
+          RIGHT: THREE.MOUSE.ROTATE,
+        }}
+        touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
       />
       <CameraRig controls={controls} />
     </Canvas>
