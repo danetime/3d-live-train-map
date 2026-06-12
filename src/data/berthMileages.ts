@@ -23,6 +23,7 @@
  */
 import { mileageToT, milesChains } from "./lineCurves";
 import type { BerthPos } from "./berths";
+import generatedBerths from "./berthMileages.generated.json";
 
 /** `dir`: travel direction this berth serves, where known (SMART splits berth
  *  steps into down/up): 1 = increasing t along the line, -1 = decreasing. On
@@ -59,9 +60,17 @@ export const BERTH_MILEAGES: Record<string, BerthMileage> = {
   "EX:E137": { line: "newton-abbot", miles: 173, chains: 56, dir: -1 }, // Exeter St David's P6
 };
 
+/**
+ * Auto-generated berth → mileage/direction for the whole Exeter panel
+ * (server/scripts/buildAllBerths.js, from SMART + CORPUS). Merged UNDER the
+ * hand-curated table so verified rows always win; this only adds coverage.
+ */
+const GENERATED = generatedBerths as Record<string, BerthMileage>;
+const ALL_BERTHS: Record<string, BerthMileage> = { ...GENERATED, ...BERTH_MILEAGES };
+
 /** Precise spline position for a berth with a known mileage, else null. */
 export function berthMileagePosition(area: string, berth: string): BerthPos | null {
-  const m = BERTH_MILEAGES[`${area}:${berth}`];
+  const m = ALL_BERTHS[`${area}:${berth}`];
   if (!m) return null;
   return { lineId: m.line, t: mileageToT(m.line, milesChains(m.miles, m.chains)), dir: m.dir };
 }
