@@ -15,8 +15,10 @@ const TOC_NAMES: Record<string, string> = {
   GW: "GWR",
   XC: "CrossCountry",
   SW: "South Western Railway",
+  AW: "Transport for Wales",
   CS: "Caledonian Sleeper",
   GR: "LNER",
+  ZZ: "Charter / other",
 };
 
 export function operatorName(code: string | undefined): string {

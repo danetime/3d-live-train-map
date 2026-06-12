@@ -10,11 +10,11 @@ import type { Train } from "../data/types";
 import { berthPosition, berthLatLng } from "../data/berths";
 import { berthMileagePosition } from "../data/berthMileages";
 import { LINE_BY_ID } from "../data/network";
-import { destinationForHeadcode, operatorForHeadcode } from "./headcodeDestinations";
 
 const WS_URL = (import.meta.env.VITE_TD_WS_URL as string) || "ws://localhost:4001";
 
-type RawTrain = { headcode: string; area: string; berth: string };
+// `toc`/`dest` are attached server-side from the Network Rail schedule.
+type RawTrain = { headcode: string; area: string; berth: string; toc?: string; dest?: string };
 
 /** Connect to the bridge. Returns a disconnect function. */
 export function connectTdFeed(
@@ -52,15 +52,14 @@ export function connectTdFeed(
         id,
         lineId: pos.lineId,
         headcode: r.headcode,
-        operator: operatorForHeadcode(r.headcode) ?? "",
+        operator: r.toc ?? "",
         t: pos.t,
         direction,
         speed: 0, // externally positioned; Train.tsx eases between berths
-        // Real destination from RTT where we have it; otherwise fall back to
-        // the line's terminus (outbound) or Exeter (inbound).
+        // Real destination from the NR schedule where we have it; otherwise fall
+        // back to the line's terminus (outbound) or Exeter (inbound).
         headingTo:
-          destinationForHeadcode(r.headcode) ??
-          (direction === 1 ? line?.destination ?? "" : "Exeter St David's"),
+          r.dest ?? (direction === 1 ? line?.destination ?? "" : "Exeter St David's"),
         berth: r.berth,
         platform: exact?.platform,
         // No `pos`: even with exact coordinates we ride the spline (berthLatLng

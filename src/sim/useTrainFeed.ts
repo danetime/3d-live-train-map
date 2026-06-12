@@ -13,9 +13,8 @@
 import { useEffect } from "react";
 import { useTrainStore } from "../store/useTrainStore";
 import { createMockTrains } from "./mockTrains";
-import { fetchLiveTrains, fetchHeadcodeInfo } from "../services/realtimeTrains";
+import { fetchLiveTrains } from "../services/realtimeTrains";
 import { connectTdFeed } from "../services/networkRailTd";
-import { setHeadcodeInfo } from "../services/headcodeDestinations";
 
 export type FeedSource = "mock" | "realtime-trains" | "network-rail-td";
 
@@ -47,18 +46,8 @@ export function useTrainFeed(source: FeedSource = "mock") {
 
     // --- Network Rail TD berth feed (WebSocket bridge) ---
     if (source === "network-rail-td") {
-      // The TD feed has headcodes but no destination/operator; enrich from RTT.
-      // Silently no-ops if RTT isn't configured (map stays empty → fallback).
-      const pollInfo = async () => {
-        try {
-          setHeadcodeInfo(await fetchHeadcodeInfo());
-        } catch {
-          /* RTT unavailable — keep the line-terminus fallback */
-        }
-      };
-      pollInfo();
-      const destTimer = setInterval(pollInfo, POLL_MS);
-
+      // Operator + destination are attached server-side from the NR schedule
+      // (see server/lib/schedule.js), so the client needs no enrichment here.
       let gotData = false;
       const disconnect = connectTdFeed(
         (trains, rawCount) => {
@@ -81,7 +70,6 @@ export function useTrainFeed(source: FeedSource = "mock") {
       );
       return () => {
         cancelled = true;
-        clearInterval(destTimer);
         disconnect();
       };
     }

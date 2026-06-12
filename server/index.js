@@ -11,6 +11,7 @@
 import { BerthState } from "./lib/berthState.js";
 import { startWsServer } from "./lib/wsServer.js";
 import { startReplay } from "./lib/replay.js";
+import { loadSchedule } from "./lib/schedule.js";
 
 const PORT = Number(process.env.WS_PORT) || 4001;
 // TD_ALL_SIG_AREA is the only reliable topic — the per-region topics (e.g.
@@ -24,7 +25,17 @@ const AREAS = new Set(
 const EXPIRY_MS = 10 * 60 * 1000;
 
 const state = new BerthState();
-const { broadcast } = startWsServer(PORT, () => state.trains());
+
+// Attach operator + destination from the Network Rail schedule (headcode →
+// { toc, dest }). No-ops gracefully until `npm run schedule` has run.
+const schedule = loadSchedule();
+const enrich = (trains) =>
+  trains.map((t) => {
+    const info = schedule.lookup(t.headcode);
+    return info ? { ...t, toc: info.toc, dest: info.dest } : t;
+  });
+
+const { broadcast } = startWsServer(PORT, () => enrich(state.trains()));
 
 const live = process.env.NR_USERNAME && process.env.NR_PASSWORD;
 // Diagnostic: count every area code seen in the raw feed (before filtering),
@@ -61,7 +72,7 @@ if (live) {
 // Broadcast the current picture once a second and age out stale trains.
 setInterval(() => {
   state.expire(EXPIRY_MS);
-  broadcast({ type: "trains", trains: state.trains() });
+  broadcast({ type: "trains", trains: enrich(state.trains()) });
 }, 1000);
 
 // Periodic heartbeat so it's obvious data is flowing (live mode only).
