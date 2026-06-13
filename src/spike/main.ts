@@ -28,8 +28,9 @@ const TRACK: Record<string, string> = {
   "3,3": "curve_br_bl", "5,3": "curve_bl_tl", "5,5": "curve_tl_tr", "3,5": "curve_tr_br",
   "4,3": "switch_a_bl", "3,4": "switch_b_br", "5,4": "switch_b_tl", "4,5": "switch_a_tr",
   "4,4": "cross",
-  "6,0": "straight_b", "6,1": "straight_b", "6,2": "curve_tr_br",
-  "7,2": "straight_a", "8,2": "straight_a", "9,2": "straight_a",
+  // branch line with colour-light signals: green at the top → yellow → red
+  "6,0": "straight_b_sig_green", "6,1": "straight_b", "6,2": "curve_tr_br",
+  "7,2": "straight_a_sig_yellow", "8,2": "straight_a", "9,2": "straight_a_sig_red",
 };
 
 // The loop the train laps, as ordered ring cells (clockwise).
@@ -63,13 +64,17 @@ async function main() {
   }
 
   // --- track overlay tiles ---------------------------------------------
+  // Signal tiles are 64×64 (track in the bottom half, post rising above), so
+  // they anchor at the diamond centre (0.75 down) rather than the tile centre.
   for (const [key, name] of Object.entries(TRACK)) {
     const [gx, gy] = key.split(",").map(Number);
-    const s = new Sprite(track[name]);
-    s.anchor.set(0.5, 0.5);
+    const tex = track[name];
+    const tall = tex.height > TH;
+    const s = new Sprite(tex);
+    s.anchor.set(0.5, tall ? 0.75 : 0.5);
     s.x = isoX(gx, gy);
     s.y = isoY(gx, gy);
-    s.zIndex = gx + gy + 0.1; // just above the ground in the same cell
+    s.zIndex = gx + gy + (tall ? 0.2 : 0.1); // just above the ground in the cell
     world.addChild(s);
   }
 

@@ -9,5 +9,11 @@
   "switch_a_tr",
   "switch_a_bl",
   "switch_b_tl",
-  "switch_b_br"
+  "switch_b_br",
+  "straight_a_sig_green",
+  "straight_a_sig_yellow",
+  "straight_a_sig_red",
+  "straight_b_sig_green",
+  "straight_b_sig_yellow",
+  "straight_b_sig_red"
 ]

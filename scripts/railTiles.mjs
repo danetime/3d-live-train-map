@@ -63,6 +63,14 @@ const RAIL_HI = [0xd9, 0xdf, 0xe4]; // sun glint on the railhead
 const GAUGE = 7; // screen px between the two rails
 const BAND = 8.5; // ballast half-width (iso-stretched on x)
 
+// signal head — lamps stacked top→bottom: GREEN, YELLOW, RED (a 3-aspect head)
+const SIG_POST = [0x3a, 0x3f, 0x47];
+const SIG_POST_HI = [0x53, 0x59, 0x61];
+const SIG_HEAD = [0x1f, 0x22, 0x26];
+const SIG_HEAD_HI = [0x2d, 0x31, 0x37];
+const LAMP_LIT = { green: [0x46, 0xd6, 0x5a], yellow: [0xf5, 0xc5, 0x18], red: [0xe2, 0x3b, 0x2e] };
+const LAMP_DIM = { green: [0x17, 0x33, 0x1c], yellow: [0x44, 0x39, 0x11], red: [0x3b, 0x15, 0x12] };
+
 // ---------------------------------------------------------------------------
 // Tiny RGBA framebuffer with source-over compositing.
 // ---------------------------------------------------------------------------
@@ -208,6 +216,49 @@ function makeTile(paths) {
   return buf;
 }
 
+// filled disc (for lamp lenses and their glow)
+function disc(buf, cx, cy, r, color, a = 255) {
+  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
+    for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+      const dx = x - cx, dy = y - cy;
+      if (dx * dx + dy * dy <= r * r) buf.px(x, y, color, a);
+    }
+}
+
+// A trackside colour-light signal whose foot stands at (bx,by). The head holds
+// three lenses — green (top), yellow, red (bottom) — and `aspect` lights one.
+function drawSignal(buf, bx, by, aspect) {
+  // mast
+  for (let y = by - 10; y <= by; y++) {
+    buf.px(bx - 1, y, SIG_POST_HI);
+    buf.px(bx, y, SIG_POST);
+  }
+  buf.px(bx - 2, by, SIG_HEAD); // foot
+  buf.px(bx + 1, by, SIG_HEAD);
+  // head housing
+  for (let y = by - 27; y <= by - 10; y++)
+    for (let x = bx - 4; x <= bx + 4; x++) buf.px(x, y, SIG_HEAD);
+  for (let y = by - 27; y <= by - 10; y++) buf.px(bx - 4, y, SIG_HEAD_HI); // lit edge
+  // the three lenses
+  const lenses = [["green", by - 23], ["yellow", by - 18], ["red", by - 13]];
+  for (const [name, cy] of lenses) {
+    const lit = name === aspect;
+    buf.px(bx, cy - 3, [0x10, 0x12, 0x14]); // little hood over each lens
+    if (lit) disc(buf, bx, cy, 3.4, LAMP_LIT[name], 55); // glow
+    disc(buf, bx, cy, 2, lit ? LAMP_LIT[name] : LAMP_DIM[name]);
+    if (lit) buf.px(bx, cy - 1, [0xff, 0xff, 0xff], 150); // glint
+  }
+}
+
+// A straight-track tile (64×32) with the signal rising above it, in a 64×64
+// frame: track sits in the bottom half, the signal post in the top half.
+function makeSignalTile(baseName, aspect, bx, by) {
+  const buf = new Buf(TW, 64);
+  buf.blit(makeTile(TILES[baseName]), 0, TH); // track in the bottom 64×32
+  drawSignal(buf, bx, by, aspect);
+  return buf;
+}
+
 // ---- the tileset -----------------------------------------------------------
 // Each entry is a list of paths; a path is [edgeA, edgeB] joined through centre.
 const TILES = {
@@ -223,6 +274,16 @@ const TILES = {
   switch_b_tl: [["TR", "BL"], ["TL", "TR"]], // straight-B + branch merging at TR
   switch_b_br: [["TR", "BL"], ["BR", "TR"]], // straight-B + branch merging at TR
 };
+
+// Signalled straights: a colour-light signal stands trackside on each straight.
+// [base straight, signal foot x, signal foot y] in the 64×64 frame (track is in
+// the bottom half, so y≈45 plants the foot on the ground beside the rails).
+const SIGNAL_POSTS = [
+  ["straight_a", 46, 45], // post to the upper-right of the ↘ line
+  ["straight_b", 18, 45], // post to the upper-left of the ↙ line
+];
+const ASPECTS = ["green", "yellow", "red"];
+const signalName = (base, aspect) => `${base}_sig_${aspect}`;
 
 // ---- ground diamonds, for the preview scenes only --------------------------
 function groundTile(fill, line) {
@@ -246,8 +307,19 @@ async function main() {
     built[name] = buf;
     await writeFile(join(TILE_DIR, `${name}.png`), buf.toPNG());
   }
-  console.log(`✓ ${Object.keys(TILES).length} track tiles → ${TILE_DIR}`);
-  await writeFile(join(TILE_DIR, "index.json"), JSON.stringify(Object.keys(TILES), null, 2));
+  // signalled straights: 2 orientations × 3 aspects
+  const signalNames = [];
+  for (const [base, bx, by] of SIGNAL_POSTS)
+    for (const aspect of ASPECTS) {
+      const name = signalName(base, aspect);
+      const buf = makeSignalTile(base, aspect, bx, by);
+      built[name] = buf;
+      signalNames.push(name);
+      await writeFile(join(TILE_DIR, `${name}.png`), buf.toPNG());
+    }
+  const allNames = [...Object.keys(TILES), ...signalNames];
+  console.log(`✓ ${allNames.length} track tiles (${signalNames.length} signalled) → ${TILE_DIR}`);
+  await writeFile(join(TILE_DIR, "index.json"), JSON.stringify(allNames, null, 2));
 
   if (!process.argv.includes("--preview")) return;
   const grass = groundTile([0x7f, 0xae, 0x54], [0x6f, 0x9c, 0x49]);
@@ -267,6 +339,20 @@ async function main() {
   });
   await writeFile("/tmp/railway_tiles_sheet.png", sheet.toPNG());
 
+  // (a2) signals sheet: rows = orientation, cols = aspect (green/yellow/red)
+  const scell = [88, 96];
+  const sig = new Buf(ASPECTS.length * scell[0], SIGNAL_POSTS.length * scell[1]);
+  sig.d.fill(0);
+  SIGNAL_POSTS.forEach(([base], r) =>
+    ASPECTS.forEach((aspect, c) => {
+      const gX = c * scell[0] + (scell[0] - TW) / 2;
+      const gY = r * scell[1] + scell[1] - TH - 10;
+      sig.blit(grass, gX, gY);
+      sig.blit(built[signalName(base, aspect)], gX, gY - TH); // lift the tall tile
+    }),
+  );
+  await writeFile("/tmp/railway_signals.png", sig.toPNG());
+
   // (b) demo scene: a track "roundabout" (8-cell ring around a central crossing,
   // which exercises all four curves, all four switches and the cross) plus a
   // branch line that runs off the map — every tile type, all connecting.
@@ -277,15 +363,18 @@ async function main() {
     "4,3": "switch_a_bl", "3,4": "switch_b_br", "5,4": "switch_b_tl", "4,5": "switch_a_tr",
     // the hub
     "4,4": "cross",
-    // a branch line running in from the top edge and out the right edge
-    "6,0": "straight_b", "6,1": "straight_b", "6,2": "curve_tr_br",
-    "7,2": "straight_a", "8,2": "straight_a", "9,2": "straight_a",
+    // a branch line running in from the top edge and out the right edge, with
+    // signals along it: green at the very top → yellow → red at the very bottom
+    "6,0": "straight_b_sig_green", "6,1": "straight_b", "6,2": "curve_tr_br",
+    "7,2": "straight_a_sig_yellow", "8,2": "straight_a", "9,2": "straight_a_sig_red",
   };
   const GRID = 10;
 
   // connectivity assertion: every used edge must meet its opposite in the
-  // neighbour that edge faces, unless that neighbour is off the board.
-  const usedEdges = (name) => [...new Set(TILES[name].flat())];
+  // neighbour that edge faces, unless that neighbour is off the board. A
+  // signalled straight connects exactly like its base straight.
+  const usedEdges = (name) =>
+    [...new Set(TILES[name.replace(/_sig_(green|yellow|red)$/, "")].flat())];
   const DIR = { TL: [-1, 0, "BR"], BR: [1, 0, "TL"], TR: [0, -1, "BL"], BL: [0, 1, "TR"] };
   for (const [key, name] of Object.entries(layout)) {
     const [gx, gy] = key.split(",").map(Number);
@@ -309,13 +398,16 @@ async function main() {
   const isoY = (gx, gy) => baseY + (gx + gy) * (TH / 2);
   for (let gy = 0; gy < GRID; gy++)
     for (let gx = 0; gx < GRID; gx++) scene.blit(grass, isoX(gx, gy), isoY(gx, gy));
-  for (let gy = 0; gy < GRID; gy++)
-    for (let gx = 0; gx < GRID; gx++) {
-      const t = layout[`${gx},${gy}`];
-      if (t) scene.blit(built[t], isoX(gx, gy), isoY(gx, gy));
-    }
+  // paint track back-to-front (gx+gy) so tall signal posts overlap correctly;
+  // a tile taller than one cell is lifted so its diamond still sits in the cell.
+  Object.entries(layout)
+    .map(([k, t]) => ({ k, t, g: k.split(",").map(Number) }))
+    .sort((a, b) => a.g[0] + a.g[1] - (b.g[0] + b.g[1]))
+    .forEach(({ t, g: [gx, gy] }) =>
+      scene.blit(built[t], isoX(gx, gy), isoY(gx, gy) + (TH - built[t].h)),
+    );
   await writeFile("/tmp/railway_demo.png", scene.toPNG());
-  console.log("✓ previews → /tmp/railway_tiles_sheet.png, /tmp/railway_demo.png");
+  console.log("✓ previews → sheet, signals, demo (/tmp/railway_*.png)");
 }
 
 main().catch((e) => {
