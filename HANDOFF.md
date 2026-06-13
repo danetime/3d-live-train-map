@@ -397,3 +397,48 @@ constantly). Coverage good for GWR, patchier elsewhere.
 7. **Delete dead RTT code** (§8).
 8. **Land/Map mode UI polish** — the user intends to redesign UI/UX; Dev Mode is
    preserved as the stable view to fall back to.
+
+---
+
+## 13. Track-graph migration (AGREED DIRECTION — step 1 done)
+
+**Why:** the recurring "untidy junctions / overlapping lines" problem (worst at
+St David's↔Exeter Central) is not a signal or offset bug — it's the core model.
+Each line is an independent spline with no shared metals and no junctions, so
+routes that share track or diverge merely overlap on screen. The user chose
+(2026-06) to invest once in a **track graph** rather than keep patching splines.
+
+**Model:** NODES (stations/junctions/termini, keyed by CRS, shared across lines)
+joined by EDGES (a track segment between adjacent nodes, owning geometry,
+double-track capability and a mileage range). Trains ride edges and pick a path
+at each node, so junctions are explicit instead of overlapping. Signals/blocks
+and berth positions become edge-relative.
+
+**Staged plan (each step ships, app keeps working — no big-bang):**
+1. **DONE** — `src/data/trackGraph.ts`: graph types + `buildTrackGraph` from the
+   existing line data; helpers `edgePointAt`, `sampleEdge`, `lineTToEdge`
+   (legacy `(lineId,t)`→`(edge,s)` bridge for steps 3–4), `junctions`,
+   `trackGraphStats`. Edge geometry is an arc-length t-range on the CURRENT
+   spline, so it's byte-faithful; verified max deviation **2.6e-14** world units
+   over 400 samples/line. Auto-detects **EXD** and **NTA** as junctions; 26
+   nodes / 32 edges (7 = Paignton's shared trunk, `drawn:false`). Nothing renders
+   from it yet; no train/signal/render code touched. Re-run the check anytime
+   with the throwaway script pattern in the chat (tsx from project root).
+2. **NEXT** — render rails from edges (replace per-line tubes in
+   `RailNetwork.tsx` with `sampleEdge` over `drawn` edges; up/down offset per
+   `doubleTrack`). Must stay pixel-identical.
+3. Move trains onto `(edge, distance)` — berth mileages already map via
+   `lineTToEdge`; platform parking (§7) carries over.
+4. Move signals onto edge-blocks.
+5. Add REAL topology where it matters, **St David's/Central first**: split the
+   Exmouth line into double-track edges + Exmouth Jn node + branch, double track
+   to Pinhoe (per user's local knowledge). This is where the junction goes tidy,
+   touching only that locality. Merge the duplicated EXD→NTA trunk edges here too.
+6. Bring in the user's 3D area model (**GLB**, committed under `public/`) as the
+   world backdrop; align rails to it via 2 reference points + scale; lay
+   edge-rails over it.
+
+**GLB note:** user is exporting an area model — GLB chosen (native to Three.js
+via drei `useGLTF`; STL=geometry-only, 3MF=print-oriented). Goes in `public/`
+(Vite serves it; loaded at runtime, not bundled). It's the *backdrop*, separate
+from track topology. Needs georeferencing (2 known points + metres scale).
