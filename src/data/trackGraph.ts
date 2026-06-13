@@ -75,6 +75,14 @@ export type TrackGraph = {
   byLine: Map<string, EdgeId[]>;
 };
 
+/**
+ * Per-edge track-type overrides for sections that differ from their line's
+ * default. The Avocet (Exmouth) branch is double track on the climb from Exeter
+ * St David's to Exeter Central, then single beyond Exmouth Junction — so the
+ * single-track `exmouth` line is double over just its first edge.
+ */
+const DOUBLE_TRACK_EDGES = new Set<EdgeId>(["exmouth:EXD-EXC"]);
+
 function build(): TrackGraph {
   const nodes = new Map<NodeId, TrackNode>();
   const edges = new Map<EdgeId, TrackEdge>();
@@ -116,7 +124,7 @@ function build(): TrackGraph {
         tFrom,
         tTo,
         length: Math.abs(tTo - tFrom) * totalLen,
-        doubleTrack: !!line.doubleTrack,
+        doubleTrack: DOUBLE_TRACK_EDGES.has(id) || !!line.doubleTrack,
         drawn: trunkEnd < 0 ? true : i >= trunkEnd,
         milesFrom: miles[i],
         milesTo: miles[i + 1],

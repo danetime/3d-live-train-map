@@ -440,13 +440,19 @@ and berth positions become edge-relative.
    + same-direction-only occupancy) from the EDGE it sits on (`lineTToEdge`)
    rather than the line. Verified identical over 1000 samples/line (no overrides
    yet). Block stays line-t (trains are line-t; identical and survives step 5).
-5. **NEXT (the visible payoff)** — model the St David's↔Central topology: double
-   track Exeter→Central, single beyond (Exmouth Jn). Per-edge `doubleTrack`
-   override in the graph; renderer/signals/trains already read it per-edge.
-5. Add REAL topology where it matters, **St David's/Central first**: split the
-   Exmouth line into double-track edges + Exmouth Jn node + branch, double track
-   to Pinhoe (per user's local knowledge). This is where the junction goes tidy,
-   touching only that locality. Merge the duplicated EXD→NTA trunk edges here too.
+5. **DONE (first visible change)** — `DOUBLE_TRACK_EDGES` in `trackGraph.ts`
+   marks `exmouth:EXD-EXC` double; `Train.tsx` rail offset now reads
+   `edge.doubleTrack`. Result: St David's→Exeter Central draws as two rails and
+   trains/signals split onto up/down there, then reduces to single beyond
+   (Exmouth Jn) — matching the real Avocet branch. Verified only Exmouth changed.
+   **Known rough edges (polish later):** (a) a ~0.7-unit lateral hop where a
+   train crosses the double→single point at Central (same style as Paignton at
+   NTA); (b) the two rails meet the single centreline at Central without
+   points/turnout geometry, so it may read as a slight pinch. **Data gap:** the
+   real "branch bearing off right" is the Exmouth branch diverging from the
+   Waterloo main (Pinhoe/Honiton) — that main isn't modelled, so the divergence
+   can't be drawn without adding it as a new line. Deferred: merge Paignton's
+   duplicated EXD→NTA trunk edges; extend/curve geometry near Central.
 6. Bring in the user's 3D area model (**GLB**, committed under `public/`) as the
    world backdrop; align rails to it via 2 reference points + scale; lay
    edge-rails over it.

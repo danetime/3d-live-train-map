@@ -281,12 +281,13 @@ export function Train({ train }: { train: TrainModel }) {
       edgePointAt(edge, s, pos);
       edgeTangentAt(edge, s, tangent); // raw tangent
       const dir = dirRef.current;
-      // Double-track lines ride the rail for the current direction. A branch
-      // that shares the double-track trunk (the Riviera line, Exeter→Newton
-      // Abbot) also rides the trunk's up/down rail until it peels off at its
+      // Double-track EDGES ride the rail for the current direction (so a
+      // part-double line like Exmouth splits onto rails only where it's double).
+      // A branch that shares the double-track trunk (the Riviera line, Exeter→
+      // Newton Abbot) rides the trunk's up/down rail until it peels off at its
       // branch stop; beyond that it follows the single-track centreline.
       let lat: number;
-      if (line.doubleTrack) {
+      if (edge.doubleTrack) {
         lat = GAUGE * dir;
       } else if (line.drawFrom) {
         const tBranch = lineStopParams(line.id)[line.stops.indexOf(line.drawFrom)];
