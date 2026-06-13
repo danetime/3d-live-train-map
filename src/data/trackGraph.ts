@@ -204,3 +204,48 @@ export function trackGraphStats() {
     totalLength,
   };
 }
+
+/** A continuous stretch of rail to draw as one ribbon, as a t-range on the line. */
+export type RailRun = { tStart: number; tEnd: number; doubleTrack: boolean };
+
+/**
+ * Group a line's DRAWN edges into continuous runs for the rail renderer — one
+ * ribbon per run, so there are no seams mid-run, only where rail treatment
+ * actually changes (a junction, a single/double transition, or the trunk a
+ * branch skips). Adjacent edges merge while their `doubleTrack` matches.
+ *
+ * The first/last edge of a line clamps to t 0/1 so a run reaches the spline ends
+ * exactly as the original per-line renderer did — keeping step 2 pixel-identical.
+ * (Once edges carry their own independent geometry in a later step, the clamp
+ * goes away.)
+ */
+export function railRuns(lineId: string): RailRun[] {
+  const ids = trackGraph.byLine.get(lineId) ?? [];
+  const edges = ids.map((id) => trackGraph.edges.get(id)!);
+  const n = edges.length;
+  const runs: RailRun[] = [];
+  let start = -1;
+
+  const flush = (endIdx: number) => {
+    if (start < 0) return;
+    runs.push({
+      tStart: start === 0 ? 0 : edges[start].tFrom,
+      tEnd: endIdx === n - 1 ? 1 : edges[endIdx].tTo,
+      doubleTrack: edges[start].doubleTrack,
+    });
+    start = -1;
+  };
+
+  for (let i = 0; i < n; i++) {
+    if (!edges[i].drawn) {
+      flush(i - 1);
+    } else if (start < 0) {
+      start = i;
+    } else if (edges[i].doubleTrack !== edges[start].doubleTrack) {
+      flush(i - 1);
+      start = i;
+    }
+  }
+  flush(n - 1);
+  return runs;
+}

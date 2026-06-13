@@ -424,10 +424,13 @@ and berth positions become edge-relative.
    nodes / 32 edges (7 = Paignton's shared trunk, `drawn:false`). Nothing renders
    from it yet; no train/signal/render code touched. Re-run the check anytime
    with the throwaway script pattern in the chat (tsx from project root).
-2. **NEXT** — render rails from edges (replace per-line tubes in
-   `RailNetwork.tsx` with `sampleEdge` over `drawn` edges; up/down offset per
-   `doubleTrack`). Must stay pixel-identical.
-3. Move trains onto `(edge, distance)` — berth mileages already map via
+2. **DONE** — `RailNetwork.tsx` renders from the graph: `railRuns(lineId)` in
+   `trackGraph.ts` groups a line's drawn edges into continuous ribbons (merging
+   while `doubleTrack` matches; first/last edge clamps to t 0/1 to match the old
+   spline-end behaviour). Verified **0.0** vertex delta vs the old per-line tubes
+   — byte-identical. `GAUGE` still exported from `RailNetwork.tsx`. Each line is
+   one run today; later steps split runs without touching the renderer.
+3. **NEXT** — move trains onto `(edge, distance)` — berth mileages already map via
    `lineTToEdge`; platform parking (§7) carries over.
 4. Move signals onto edge-blocks.
 5. Add REAL topology where it matters, **St David's/Central first**: split the
