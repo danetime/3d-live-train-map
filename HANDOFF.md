@@ -440,19 +440,21 @@ and berth positions become edge-relative.
    + same-direction-only occupancy) from the EDGE it sits on (`lineTToEdge`)
    rather than the line. Verified identical over 1000 samples/line (no overrides
    yet). Block stays line-t (trains are line-t; identical and survives step 5).
-5. **DONE (first visible change)** — `DOUBLE_TRACK_EDGES` in `trackGraph.ts`
-   marks `exmouth:EXD-EXC` double; `Train.tsx` rail offset now reads
-   `edge.doubleTrack`. Result: St David's→Exeter Central draws as two rails and
-   trains/signals split onto up/down there, then reduces to single beyond
-   (Exmouth Jn) — matching the real Avocet branch. Verified only Exmouth changed.
-   **Known rough edges (polish later):** (a) a ~0.7-unit lateral hop where a
-   train crosses the double→single point at Central (same style as Paignton at
-   NTA); (b) the two rails meet the single centreline at Central without
-   points/turnout geometry, so it may read as a slight pinch. **Data gap:** the
-   real "branch bearing off right" is the Exmouth branch diverging from the
-   Waterloo main (Pinhoe/Honiton) — that main isn't modelled, so the divergence
-   can't be drawn without adding it as a new line. Deferred: merge Paignton's
-   duplicated EXD→NTA trunk edges; extend/curve geometry near Central.
+5. **DONE** — network-wide double/single layout via `DOUBLE_TRACK_EDGES` in
+   `trackGraph.ts` (`Train.tsx` rail offset + signals read `edge.doubleTrack`):
+   - Main line (Plymouth↔Taunton): double (the `newton-abbot`/`taunton` line flag).
+   - Exmouth (Avocet): double St David's→Exeter Central, single beyond, with a
+     **Topsham passing loop** (double `NCO-TOP`,`TOP-EXN`) so up/down trains cross.
+   - Paignton (Riviera): double Newton Abbot (Aller Jn)→Paignton.
+   Verified per-line via `railRuns`. **Known rough edges (polish later):**
+   ~0.7-unit lateral hops at double↔single transitions (Central, the loop ends);
+   no points/turnout geometry where rails merge (may read as a pinch); the loop
+   spans NCO→EXN so it's longer than a real loop (stylised — can shorten).
+   **Data gaps:** Aller Jn is modelled as branching at NTA (the real divergence
+   is ~1mi south); the Waterloo/Pinhoe main the Exmouth branch leaves at Exmouth
+   Jn isn't modelled, so that fork can't be drawn without adding it as a new line.
+   Deferred: merge Paignton's duplicated EXD→NTA trunk edges; St David's platform
+   *tracks* (we have 6 platform faces + parking + bird's-eye, not 6 track roads).
 6. **PARKED** — the custom 3D area model backdrop. User's export was 250 MB
    (too big for git AND too heavy for the browser to render); optimisation
    (`gltf-transform optimize`) / re-export stalled, so the user chose to **skip

@@ -77,11 +77,25 @@ export type TrackGraph = {
 
 /**
  * Per-edge track-type overrides for sections that differ from their line's
- * default. The Avocet (Exmouth) branch is double track on the climb from Exeter
- * St David's to Exeter Central, then single beyond Exmouth Junction — so the
- * single-track `exmouth` line is double over just its first edge.
+ * default. Covers the real double/single layout of the Devon network:
+ *   - Exmouth (Avocet) branch: double on the St David's→Exeter Central climb,
+ *     then single beyond Exmouth Junction, with a short double PASSING LOOP
+ *     around Topsham so up/down trains can cross.
+ *   - Paignton (Riviera) branch: double from Newton Abbot (Aller Jn) to Paignton.
+ * (The main line — newton-abbot + taunton, Plymouth↔Taunton — is already double
+ * via its line flag.)
  */
-const DOUBLE_TRACK_EDGES = new Set<EdgeId>(["exmouth:EXD-EXC"]);
+const DOUBLE_TRACK_EDGES = new Set<EdgeId>([
+  // Exmouth branch: St David's → Exeter Central (double climb)
+  "exmouth:EXD-EXC",
+  // Exmouth branch: Topsham passing loop (double through Topsham)
+  "exmouth:NCO-TOP",
+  "exmouth:TOP-EXN",
+  // Paignton branch: Newton Abbot (Aller Jn) → Paignton (double throughout)
+  "paignton:NTA-TRR",
+  "paignton:TRR-TQY",
+  "paignton:TQY-PGN",
+]);
 
 function build(): TrackGraph {
   const nodes = new Map<NodeId, TrackNode>();
