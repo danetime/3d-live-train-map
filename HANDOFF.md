@@ -436,9 +436,13 @@ and berth positions become edge-relative.
    500 samples × both directions × all lines. Lateral rail offset still
    line/t-based (revisited once edges carry independent geometry). Point mode +
    platform parking untouched.
-4. **NEXT** — move signals onto edge-blocks (a block = an edge range in a
-   direction; `lineTToEdge` already converts train positions, so trains needn't
-   store an edge).
+4. **DONE** — `Signals.tsx` derives each signal's double-track flag (rail offset
+   + same-direction-only occupancy) from the EDGE it sits on (`lineTToEdge`)
+   rather than the line. Verified identical over 1000 samples/line (no overrides
+   yet). Block stays line-t (trains are line-t; identical and survives step 5).
+5. **NEXT (the visible payoff)** — model the St David's↔Central topology: double
+   track Exeter→Central, single beyond (Exmouth Jn). Per-edge `doubleTrack`
+   override in the graph; renderer/signals/trains already read it per-edge.
 5. Add REAL topology where it matters, **St David's/Central first**: split the
    Exmouth line into double-track edges + Exmouth Jn node + branch, double track
    to Pinhoe (per user's local knowledge). This is where the junction goes tidy,

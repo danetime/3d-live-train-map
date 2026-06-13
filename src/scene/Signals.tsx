@@ -17,6 +17,7 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { LINES } from "../data/network";
 import { lineCurve, lineStopParams, branchOffset } from "../data/lineCurves";
+import { lineTToEdge } from "../data/trackGraph";
 import { realSignalsFor } from "../data/realSignals";
 import { useTrainStore } from "../store/useTrainStore";
 import { GAUGE } from "./RailNetwork";
@@ -76,12 +77,13 @@ export function Signals() {
           curve.getPointAt(sig.t, p);
           curve.getTangentAt(sig.t, tan);
 
+          // Whether this signal stands on double track comes from the EDGE it
+          // sits on (track graph), so a part-double line splits up/down rails
+          // correctly. Identical to the line flag where a line is uniform.
+          const dbl = lineTToEdge(line.id, sig.t)?.edge.doubleTrack ?? !!line.doubleTrack;
           // Post sits beyond the rail it applies to: the dir-rail is at
           // lateral dir*GAUGE (double track), following any branch offset.
-          const lateral =
-            (line.doubleTrack ? GAUGE : 0) * dir +
-            branchOffset(line, sig.t) +
-            dir * 0.95;
+          const lateral = (dbl ? GAUGE : 0) * dir + branchOffset(line, sig.t) + dir * 0.95;
           const x = p.x + tan.z * lateral;
           const z = p.z - tan.x * lateral;
 
@@ -105,7 +107,7 @@ export function Signals() {
             dir,
             lo: Math.min(sig.t, next) - 0.004,
             hi: Math.max(sig.t, next) + 0.004,
-            doubleTrack: !!line.doubleTrack,
+            doubleTrack: dbl,
           });
         });
       }
