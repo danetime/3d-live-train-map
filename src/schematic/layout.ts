@@ -39,18 +39,33 @@ export const SCHEMATIC_POS: Record<string, Pt> = {
   TQY: { x: 3.4, y: 2.1 },
   PGN: { x: 3.4, y: 2.9 },
 
-  // Exmouth (Avocet) branch — drops from St David's
+  // Exmouth (Avocet) branch — double track runs straight south from St David's
+  // through Exeter Central and St James Park to Exmouth Junction; there the
+  // single branch peels off to the south-west toward Exmouth (and the
+  // unmodelled main line carries on south — see SCHEMATIC_STUBS).
   EXC: { x: 10.4, y: 1.3 },
   SJP: { x: 10.4, y: 2.1 },
-  POL: { x: 10.4, y: 2.9 },
-  DIG: { x: 10.4, y: 3.7 },
-  NCO: { x: 10.4, y: 4.5 },
-  TOP: { x: 10.4, y: 5.3 },
-  EXN: { x: 10.4, y: 6.1 },
-  LYC: { x: 10.4, y: 6.9 },
-  LYM: { x: 10.4, y: 7.7 },
-  EXM: { x: 10.4, y: 8.5 },
+  POL: { x: 9.7, y: 2.9 },
+  DIG: { x: 9.2, y: 3.7 },
+  NCO: { x: 8.7, y: 4.5 },
+  TOP: { x: 8.2, y: 5.3 },
+  EXN: { x: 7.7, y: 6.1 },
+  LYC: { x: 7.3, y: 6.8 },
+  LYM: { x: 6.9, y: 7.4 },
+  EXM: { x: 6.5, y: 8.1 },
 };
+
+/** Junctions drawn as labelled markers (they aren't stations/stops). */
+export const SCHEMATIC_JUNCTIONS: { id: string; name: string; x: number; y: number; signal?: string }[] = [
+  { id: "XMJ", name: "Exmouth Jn", x: 10.4, y: 2.55, signal: "EJ7" },
+];
+
+/** Short stubs for lines that continue off the diagram (not modelled routes). */
+export const SCHEMATIC_STUBS: { from: Pt; to: Pt; label: string }[] = [
+  // The West of England main line (to Salisbury / London Waterloo) carries on
+  // south from Exmouth Junction — shown as a short double stub off the diagram.
+  { from: { x: 10.4, y: 2.1 }, to: { x: 10.4, y: 3.8 }, label: "Salisbury / London Waterloo" },
+];
 
 /** Bounding box of the schematic, for sizing the SVG viewBox. */
 export const SCHEMATIC_BOUNDS = (() => {

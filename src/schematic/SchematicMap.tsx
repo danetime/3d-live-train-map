@@ -16,7 +16,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LINES, LINE_BY_ID, STATIONS } from "../data/network";
 import { useTrainStore } from "../store/useTrainStore";
 import { lineTToEdge } from "../data/trackGraph";
-import { SCHEMATIC_POS, SCHEMATIC_BOUNDS, lineSegments, schematicPos } from "./layout";
+import {
+  SCHEMATIC_POS,
+  SCHEMATIC_BOUNDS,
+  SCHEMATIC_JUNCTIONS,
+  SCHEMATIC_STUBS,
+  lineSegments,
+  schematicPos,
+} from "./layout";
 import { schematicSignals } from "./signals";
 
 const UX = 66; // px per x grid unit
@@ -268,6 +275,26 @@ export function SchematicMap() {
           }}
         />
 
+        {/* Off-diagram stubs (e.g. the main line continuing past Exmouth Jn) */}
+        {SCHEMATIC_STUBS.map((stub, i) => {
+          const ax = px(stub.from.x);
+          const ay = py(stub.from.y);
+          const bx = px(stub.to.x);
+          const by = py(stub.to.y);
+          const dx = bx - ax;
+          const dy = by - ay;
+          const len = Math.hypot(dx, dy) || 1;
+          const nx = (-dy / len) * RAIL_GAP;
+          const ny = (dx / len) * RAIL_GAP;
+          return (
+            <g key={`stub-${i}`}>
+              <line x1={ax + nx} y1={ay + ny} x2={bx + nx} y2={by + ny} stroke="#56678a" strokeWidth={4} strokeLinecap="round" />
+              <line x1={ax - nx} y1={ay - ny} x2={bx - nx} y2={by - ny} stroke="#56678a" strokeWidth={4} strokeLinecap="round" />
+              <text x={bx} y={by + 15} textAnchor="middle" className="sm-stub-label">↓ {stub.label}</text>
+            </g>
+          );
+        })}
+
         {/* Route lines — a single line, or twin rails where double track */}
         {LINES.flatMap((line) =>
           lineSegments(line.id).map((seg, i) => {
@@ -304,6 +331,30 @@ export function SchematicMap() {
             );
           }),
         )}
+
+        {/* Junctions (labelled markers) */}
+        {SCHEMATIC_JUNCTIONS.map((j) => {
+          const cx = px(j.x);
+          const cy = py(j.y);
+          return (
+            <g key={j.id}>
+              <rect
+                x={cx - 4.5}
+                y={cy - 4.5}
+                width={9}
+                height={9}
+                transform={`rotate(45 ${cx} ${cy})`}
+                fill="#0b1220"
+                stroke="#e8eef7"
+                strokeWidth={1.5}
+              />
+              <text x={cx + 13} y={cy} dominantBaseline="middle" className="sm-jn-label">
+                {j.name}
+                {j.signal ? ` · ${j.signal}` : ""}
+              </text>
+            </g>
+          );
+        })}
 
         {/* Stations */}
         {Object.entries(SCHEMATIC_POS).map(([code, p]) => {

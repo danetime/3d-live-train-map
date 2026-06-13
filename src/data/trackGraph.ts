@@ -86,8 +86,10 @@ export type TrackGraph = {
  * via its line flag.)
  */
 const DOUBLE_TRACK_EDGES = new Set<EdgeId>([
-  // Exmouth branch: St David's → Exeter Central (double climb)
+  // Exmouth branch: St David's → Exeter Central → St James Park → Exmouth Jn
+  // (double all the way to the junction)
   "exmouth:EXD-EXC",
+  "exmouth:EXC-SJP",
   // Exmouth branch: Topsham passing loop (double through Topsham)
   "exmouth:NCO-TOP",
   "exmouth:TOP-EXN",
