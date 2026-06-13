@@ -92,18 +92,20 @@ async function main() {
     t.y = isoY(gx, SPUR_GY);
     t.zIndex = gx + SPUR_GY + 0.1;
     world.addChild(t);
-    const p = new Sprite(platforms.platform_a_ne);
+    // flat slab in the middle, sloped end ramps capping the run
+    const pn = gx === 1 ? "platform_a_ne_ramp_hi" : gx === 3 ? "platform_a_ne_ramp_lo" : "platform_a_ne";
+    const p = new Sprite(platforms[pn]);
     p.anchor.set(0.5, 0.75);
     p.x = isoX(gx, SPUR_GY);
     p.y = isoY(gx, SPUR_GY);
     p.zIndex = gx + SPUR_GY + 0.2;
     world.addChild(p);
   }
-  const meta = stationMeta.station_large;
-  const st = new Sprite(stations.station_large);
+  const meta = stationMeta.station_large_a_ne;
+  const st = new Sprite(stations.station_large_a_ne);
   st.anchor.set(meta.anchor[0], meta.anchor[1]);
-  st.x = isoX(2, SPUR_GY) + 34; // nudge onto the NE platform
-  st.y = isoY(2, SPUR_GY) - 17;
+  st.x = isoX(2, SPUR_GY) + meta.nudge[0]; // nudge off the centre-line onto the NE platform
+  st.y = isoY(2, SPUR_GY) + meta.nudge[1];
   st.zIndex = 2 + SPUR_GY + 0.3;
   world.addChild(st);
 
