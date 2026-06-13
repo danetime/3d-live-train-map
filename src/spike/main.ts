@@ -50,6 +50,7 @@ async function main() {
 
   const art = makeArt(app);
   const track = await loadTrack();
+  const trains = await loadTrains();
 
   // --- ground tiles -----------------------------------------------------
   const isWater = (gy: number) => gy >= 9; // a thin strip of "estuary"
@@ -79,9 +80,9 @@ async function main() {
     world.addChild(s);
   }
 
-  // --- the train (placeholder box; later a directional PixelLab sprite) --
-  const train = new Sprite(art.train);
-  train.anchor.set(0.5, 0.82);
+  // --- the train: a boxy Class 150 sprite, swapped per heading ----------
+  const train = new Sprite(trains.a);
+  train.anchor.set(0.5, 0.7); // foot of the box (set by scripts/trainSprite.mjs)
   world.addChild(train);
 
   // --- camera: centre the board, drag to pan, wheel to zoom -------------
@@ -133,6 +134,7 @@ async function main() {
     const [bx, by] = LOOP[(i + 1) % LOOP.length];
     const gx = ax + (bx - ax) * f;
     const gy = ay + (by - ay) * f;
+    train.texture = ay === by ? trains.a : trains.b; // gx move → a, gy move → b
     train.x = isoX(gx, gy);
     train.y = isoY(gx, gy);
     train.zIndex = gx + gy + 0.5;
@@ -161,7 +163,27 @@ async function loadTrack(): Promise<Record<string, Texture>> {
 }
 
 // ---------------------------------------------------------------------------
-// Vector placeholders for the ground + train (the track is real art now).
+// Load the train sprites (PNGs from scripts/trainSprite.mjs): train_a is gx-
+// aligned (↘/↖), train_b is gy-aligned (↙/↗).
+// ---------------------------------------------------------------------------
+async function loadTrains(): Promise<{ a: Texture; b: Texture }> {
+  const urls = import.meta.glob("./assets/train_*.png", {
+    eager: true,
+    query: "?url",
+    import: "default",
+  }) as Record<string, string>;
+  const byName: Record<string, Texture> = {};
+  for (const [path, url] of Object.entries(urls)) {
+    const name = path.split("/").pop()!.replace(".png", "");
+    const tex = (await Assets.load(url)) as Texture;
+    tex.source.scaleMode = "nearest";
+    byName[name] = tex;
+  }
+  return { a: byName.train_a, b: byName.train_b };
+}
+
+// ---------------------------------------------------------------------------
+// Vector placeholders for the ground (track + trains are real art now).
 // ---------------------------------------------------------------------------
 function makeArt(app: Application) {
   const diamond = (fill: number, line: number): Texture => {
@@ -172,15 +194,9 @@ function makeArt(app: Application) {
     return app.renderer.generateTexture(g);
   };
 
-  const trainG = new Graphics()
-    .roundRect(-30, -24, 60, 30, 8)
-    .fill(0xe53e3e)
-    .stroke({ width: 3, color: 0x9b2c2c });
-
   return {
     grass: diamond(0x7fae54, 0x6f9c49),
     water: diamond(0x6db4d8, 0x5aa0c6),
-    train: app.renderer.generateTexture(trainG),
   };
 }
 

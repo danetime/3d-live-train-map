@@ -30,8 +30,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import pkg from "pngjs";
-const { PNG } = pkg;
+import { Buf, hash, line, disc } from "./iso.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const TILE_DIR = join(here, "..", "src", "spike", "assets", "track");
@@ -86,72 +85,6 @@ const CONCRETE = [0x9a, 0x95, 0x8c];
 const CONCRETE_HI = [0xb4, 0xaf, 0xa5];
 const LAMP_LIT = { green: [0x53, 0xe0, 0x66], yellow: [0xf7, 0xc9, 0x22], red: [0xe8, 0x3f, 0x32] };
 const LAMP_DIM = { green: [0x16, 0x33, 0x1c], yellow: [0x45, 0x39, 0x11], red: [0x3b, 0x15, 0x12] };
-
-// ---------------------------------------------------------------------------
-// Tiny RGBA framebuffer with source-over compositing.
-// ---------------------------------------------------------------------------
-class Buf {
-  constructor(w, h) {
-    this.w = w;
-    this.h = h;
-    this.d = new Uint8ClampedArray(w * h * 4);
-  }
-  px(x, y, [r, g, b], a = 255) {
-    x |= 0;
-    y |= 0;
-    if (x < 0 || y < 0 || x >= this.w || y >= this.h || a <= 0) return;
-    const i = (y * this.w + x) * 4;
-    const sa = a / 255;
-    const da = this.d[i + 3] / 255;
-    const oa = sa + da * (1 - sa);
-    if (oa <= 0) return;
-    this.d[i] = (r * sa + this.d[i] * da * (1 - sa)) / oa;
-    this.d[i + 1] = (g * sa + this.d[i + 1] * da * (1 - sa)) / oa;
-    this.d[i + 2] = (b * sa + this.d[i + 2] * da * (1 - sa)) / oa;
-    this.d[i + 3] = oa * 255;
-  }
-  blit(src, ox, oy) {
-    for (let y = 0; y < src.h; y++)
-      for (let x = 0; x < src.w; x++) {
-        const i = (y * src.w + x) * 4;
-        this.px(ox + x, oy + y, [src.d[i], src.d[i + 1], src.d[i + 2]], src.d[i + 3]);
-      }
-  }
-  toPNG() {
-    const p = new PNG({ width: this.w, height: this.h });
-    p.data.set(this.d);
-    return PNG.sync.write(p);
-  }
-}
-
-// stable per-pixel jitter so texture doesn't shimmer between runs
-const hash = (x, y) => {
-  const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-  return s - Math.floor(s);
-};
-
-// straight-line plot (Bresenham) for continuous rails
-function line(buf, x0, y0, x1, y1, color, a = 255) {
-  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
-  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
-  const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
-  let err = dx + dy;
-  for (;;) {
-    buf.px(x0, y0, color, a);
-    if (x0 === x1 && y0 === y1) break;
-    const e2 = 2 * err;
-    if (e2 >= dy) { err += dy; x0 += sx; }
-    if (e2 <= dx) { err += dx; y0 += sy; }
-  }
-}
-
-function disc(buf, cx, cy, r, color, a = 255) {
-  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
-    for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
-      const dx = x - cx, dy = y - cy;
-      if (dx * dx + dy * dy <= r * r) buf.px(x, y, color, a);
-    }
-}
 
 // quadratic Bézier sampler (control point = tile centre)
 function sample(a, b, n = 110) {
