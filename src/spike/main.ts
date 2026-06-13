@@ -1,44 +1,59 @@
 /**
- * Throwaway PixiJS isometric spike — validates the 2D pixel-art route
- * (PixelLab assets + an iso renderer) WITHOUT touching the live three.js app.
+ * Throwaway PixiJS isometric spike — validates the 2D pixel-art route WITHOUT
+ * touching the live three.js app.
  *
- * Today it draws placeholder vector diamond tiles and a box "train" that glides
- * along a straight iso line. Everything that will become real art is isolated
- * behind small factory functions (makeTileTexture / makeTrainTexture) so a real
- * PixelLab PNG tileset can drop straight in — see loadArt() at the bottom.
+ * It now draws a real procedural iso RAILWAY TILESET (see scripts/railTiles.mjs):
+ * straights on both grid axes, four quarter-curves, a diamond crossing and four
+ * switches. The tiles are transparent overlays that key into each other on the
+ * shared diamond edges, so track can run in every direction. A train rides the
+ * roundabout on a continuous loop.
  *
  * Run: `npm run dev`, then open /spike.html
+ * (Re)generate the tiles: `node scripts/railTiles.mjs`
  */
-import { Application, Container, Graphics, Sprite, type Texture } from "pixi.js";
+import { Application, Assets, Container, Graphics, Sprite, type Texture } from "pixi.js";
 
 const TW = 64; // iso tile width (pixels)
 const TH = 32; // iso tile height — 2:1 classic iso
-const GRID = 14; // board is GRID×GRID tiles
-const TRACK_ROW = 7; // the line runs along this grid row
+const GRID = 10; // board is GRID×GRID tiles
 
 // Grid (gx, gy) → screen pixels at the tile's centre.
 const isoX = (gx: number, gy: number) => (gx - gy) * (TW / 2);
 const isoY = (gx: number, gy: number) => (gx + gy) * (TH / 2);
+
+// Where each track tile goes. Built/verified by scripts/railTiles.mjs: a
+// "roundabout" (ring of curves + switches around a central crossing) plus a
+// branch line that runs in from the top edge and out the right edge.
+const TRACK: Record<string, string> = {
+  "3,3": "curve_br_bl", "5,3": "curve_bl_tl", "5,5": "curve_tl_tr", "3,5": "curve_tr_br",
+  "4,3": "switch_a_bl", "3,4": "switch_b_br", "5,4": "switch_b_tl", "4,5": "switch_a_tr",
+  "4,4": "cross",
+  "6,0": "straight_b", "6,1": "straight_b", "6,2": "curve_tr_br",
+  "7,2": "straight_a", "8,2": "straight_a", "9,2": "straight_a",
+};
+
+// The loop the train laps, as ordered ring cells (clockwise).
+const LOOP: [number, number][] = [
+  [3, 3], [4, 3], [5, 3], [5, 4], [5, 5], [4, 5], [3, 5], [3, 4],
+];
 
 async function main() {
   const app = new Application();
   await app.init({ background: "#e7e1d3", resizeTo: window, antialias: false });
   document.body.appendChild(app.canvas);
 
-  // World container holds the whole board; we pan/zoom this, not the camera.
   const world = new Container();
   world.sortableChildren = true; // paint back-to-front by zIndex (= gx+gy)
   app.stage.addChild(world);
 
   const art = makeArt(app);
+  const track = await loadTrack();
 
-  // --- ground + track tiles ---------------------------------------------
-  const isWater = (gx: number, gy: number) => gy >= 11; // a strip of "estuary"
+  // --- ground tiles -----------------------------------------------------
+  const isWater = (gy: number) => gy >= 9; // a thin strip of "estuary"
   for (let gy = 0; gy < GRID; gy++) {
     for (let gx = 0; gx < GRID; gx++) {
-      const tex =
-        gy === TRACK_ROW ? art.track : isWater(gx, gy) ? art.water : art.grass;
-      const s = new Sprite(tex);
+      const s = new Sprite(isWater(gy) ? art.water : art.grass);
       s.anchor.set(0.5, 0.5);
       s.x = isoX(gx, gy);
       s.y = isoY(gx, gy);
@@ -47,17 +62,18 @@ async function main() {
     }
   }
 
-  // --- station nodes ----------------------------------------------------
-  for (const gx of [3, 10]) {
-    const node = new Sprite(art.node);
-    node.anchor.set(0.5, 0.85);
-    node.x = isoX(gx, TRACK_ROW);
-    node.y = isoY(gx, TRACK_ROW);
-    node.zIndex = gx + TRACK_ROW + 0.4;
-    world.addChild(node);
+  // --- track overlay tiles ---------------------------------------------
+  for (const [key, name] of Object.entries(TRACK)) {
+    const [gx, gy] = key.split(",").map(Number);
+    const s = new Sprite(track[name]);
+    s.anchor.set(0.5, 0.5);
+    s.x = isoX(gx, gy);
+    s.y = isoY(gx, gy);
+    s.zIndex = gx + gy + 0.1; // just above the ground in the same cell
+    world.addChild(s);
   }
 
-  // --- the train (placeholder; later a directional PixelLab sprite) -----
+  // --- the train (placeholder box; later a directional PixelLab sprite) --
   const train = new Sprite(art.train);
   train.anchor.set(0.5, 0.82);
   world.addChild(train);
@@ -100,21 +116,45 @@ async function main() {
     { passive: false },
   );
 
-  // --- animate: ease the train back and forth along the track row -------
-  let t = 0;
+  // --- animate: lap the train around the roundabout loop ----------------
+  let s = 0;
   app.ticker.add((ticker) => {
-    t += (ticker.deltaMS / 1000) * 0.55;
-    const p = (Math.sin(t) * 0.5 + 0.5) * (GRID - 1); // 0..GRID-1, eased
-    train.x = isoX(p, TRACK_ROW);
-    train.y = isoY(p, TRACK_ROW);
-    train.zIndex = p + TRACK_ROW + 0.5;
+    s = (s + (ticker.deltaMS / 1000) * 0.9) % LOOP.length;
+    const i = Math.floor(s);
+    const f = s - i;
+    const [ax, ay] = LOOP[i];
+    const [bx, by] = LOOP[(i + 1) % LOOP.length];
+    const gx = ax + (bx - ax) * f;
+    const gy = ay + (by - ay) * f;
+    train.x = isoX(gx, gy);
+    train.y = isoY(gx, gy);
+    train.zIndex = gx + gy + 0.5;
   });
 }
 
 // ---------------------------------------------------------------------------
-// Art factory. Everything here is a placeholder vector texture. To go real,
-// replace makeArt() with an async loader that pulls a PixelLab PNG tileset via
-// Pixi's Assets API and slices it into these same named textures.
+// Load the procedural track tileset (PNGs from scripts/railTiles.mjs). Vite
+// turns the glob into URL strings; Pixi's Assets API loads them, and we force
+// nearest-neighbour sampling so the pixel art stays crisp when zoomed.
+// ---------------------------------------------------------------------------
+async function loadTrack(): Promise<Record<string, Texture>> {
+  const urls = import.meta.glob("./assets/track/*.png", {
+    eager: true,
+    query: "?url",
+    import: "default",
+  }) as Record<string, string>;
+  const out: Record<string, Texture> = {};
+  for (const [path, url] of Object.entries(urls)) {
+    const name = path.split("/").pop()!.replace(".png", "");
+    const tex = (await Assets.load(url)) as Texture;
+    tex.source.scaleMode = "nearest";
+    out[name] = tex;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Vector placeholders for the ground + train (the track is real art now).
 // ---------------------------------------------------------------------------
 function makeArt(app: Application) {
   const diamond = (fill: number, line: number): Texture => {
@@ -125,21 +165,14 @@ function makeArt(app: Application) {
     return app.renderer.generateTexture(g);
   };
 
-  const nodeG = new Graphics()
-    .circle(0, 0, 7)
-    .fill(0xf3eee2)
-    .stroke({ width: 3, color: 0x2b3340 });
-
   const trainG = new Graphics()
-    .roundRect(-22, -18, 44, 22, 6)
+    .roundRect(-20, -16, 40, 20, 6)
     .fill(0xe53e3e)
     .stroke({ width: 2, color: 0x9b2c2c });
 
   return {
     grass: diamond(0x7fae54, 0x6f9c49),
     water: diamond(0x6db4d8, 0x5aa0c6),
-    track: diamond(0x3182ce, 0x276bb0),
-    node: app.renderer.generateTexture(nodeG),
     train: app.renderer.generateTexture(trainG),
   };
 }

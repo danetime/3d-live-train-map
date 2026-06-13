@@ -1,0 +1,13 @@
+[
+  "straight_a",
+  "straight_b",
+  "curve_tl_tr",
+  "curve_tr_br",
+  "curve_br_bl",
+  "curve_bl_tl",
+  "cross",
+  "switch_a_tr",
+  "switch_a_bl",
+  "switch_b_tl",
+  "switch_b_br"
+]
