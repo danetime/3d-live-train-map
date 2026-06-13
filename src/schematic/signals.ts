@@ -8,6 +8,12 @@
  */
 import { realSignalsFor } from "../data/realSignals";
 import { lineTToEdge } from "../data/trackGraph";
+import { SCHEMATIC_JUNCTIONS } from "./layout";
+
+/** Signals shown AT a junction marker (not as a dot on the running line). */
+const JUNCTION_SIGNALS = new Set(
+  SCHEMATIC_JUNCTIONS.map((j) => j.signal).filter((s): s is string => !!s),
+);
 
 export type SchematicSignal = {
   id: string;
@@ -23,7 +29,7 @@ export type SchematicSignal = {
 };
 
 export function schematicSignals(lineId: string): SchematicSignal[] {
-  const sigs = realSignalsFor(lineId);
+  const sigs = realSignalsFor(lineId).filter((s) => !JUNCTION_SIGNALS.has(s.id));
   const out: SchematicSignal[] = [];
   for (const dir of [1, -1] as const) {
     const ds = sigs.filter((s) => s.dir === dir).sort((a, b) => a.t - b.t);

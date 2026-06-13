@@ -21,6 +21,7 @@ import {
   SCHEMATIC_BOUNDS,
   SCHEMATIC_JUNCTIONS,
   SCHEMATIC_STUBS,
+  SCHEMATIC_LOOPS,
   lineSegments,
   schematicPos,
 } from "./layout";
@@ -331,6 +332,45 @@ export function SchematicMap() {
             );
           }),
         )}
+
+        {/* Passing loops — a short parallel track beside a station */}
+        {SCHEMATIC_LOOPS.map((loop) => {
+          const line = LINE_BY_ID.get(loop.lineId);
+          const stops = line?.stops ?? [];
+          const i = stops.indexOf(loop.at);
+          const at = SCHEMATIC_POS[loop.at];
+          const prev = SCHEMATIC_POS[stops[i - 1]];
+          const next = SCHEMATIC_POS[stops[i + 1]];
+          if (!line || !at || !prev || !next) return null;
+          const ax = px(at.x);
+          const ay = py(at.y);
+          let dx = px(next.x) - px(prev.x);
+          let dy = py(next.y) - py(prev.y);
+          const len = Math.hypot(dx, dy) || 1;
+          dx /= len;
+          dy /= len;
+          const nx = -dy; // perpendicular (loop sits to one side of the line)
+          const ny = dx;
+          const HALF = 20;
+          const OFF = 9;
+          const p0x = ax - dx * HALF;
+          const p0y = ay - dy * HALF;
+          const p1x = ax + dx * HALF;
+          const p1y = ay + dy * HALF;
+          const pts = `${p0x},${p0y} ${p0x + nx * OFF},${p0y + ny * OFF} ${p1x + nx * OFF},${p1y + ny * OFF} ${p1x},${p1y}`;
+          return (
+            <polyline
+              key={`loop-${loop.lineId}-${loop.at}`}
+              points={pts}
+              fill="none"
+              stroke={line.color}
+              strokeWidth={4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.92}
+            />
+          );
+        })}
 
         {/* Junctions (labelled markers) */}
         {SCHEMATIC_JUNCTIONS.map((j) => {

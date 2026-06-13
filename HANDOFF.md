@@ -366,6 +366,10 @@ constantly). Coverage good for GWR, patchier elsewhere.
 
 ## 11. Conventions & workflow
 
+- **ASK WHEN UNSURE (user's standing instruction, 2026-06):** if anything about
+  a **design or technical decision** is ambiguous, ASK the user before building —
+  push for the detail you need rather than guessing. They strongly prefer a
+  clarifying question over a wrong guess and a rework cycle.
 - **Branch:** `claude/nifty-goldberg-1ubft1` (continues from
   `claude/train-tracking-3d-app-jrr3lr`). Develop on the session's designated
   branch, commit with clear messages, push (`git push -u origin <branch>`). Do

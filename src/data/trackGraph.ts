@@ -90,14 +90,13 @@ const DOUBLE_TRACK_EDGES = new Set<EdgeId>([
   // (double all the way to the junction)
   "exmouth:EXD-EXC",
   "exmouth:EXC-SJP",
-  // Exmouth branch: Topsham passing loop (double through Topsham)
-  "exmouth:NCO-TOP",
-  "exmouth:TOP-EXN",
   // Paignton branch: Newton Abbot (Aller Jn) → Paignton (double throughout)
   "paignton:NTA-TRR",
   "paignton:TRR-TQY",
   "paignton:TQY-PGN",
 ]);
+// NB: the Topsham passing loop is short (just at Topsham), so it's drawn as a
+// SCHEMATIC_LOOPS bulge rather than doubling the NCO-TOP / TOP-EXN edges.
 
 function build(): TrackGraph {
   const nodes = new Map<NodeId, TrackNode>();

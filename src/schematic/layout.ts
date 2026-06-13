@@ -67,6 +67,12 @@ export const SCHEMATIC_STUBS: { from: Pt; to: Pt; label: string }[] = [
   { from: { x: 10.4, y: 2.1 }, to: { x: 10.4, y: 3.8 }, label: "Salisbury / London Waterloo" },
 ];
 
+/** Passing loops drawn as a short parallel track beside a station (not a full
+ *  double-track edge — e.g. Topsham is a short loop, not double to its neighbours). */
+export const SCHEMATIC_LOOPS: { lineId: string; at: string }[] = [
+  { lineId: "exmouth", at: "TOP" },
+];
+
 /** Bounding box of the schematic, for sizing the SVG viewBox. */
 export const SCHEMATIC_BOUNDS = (() => {
   const xs = Object.values(SCHEMATIC_POS).map((p) => p.x);
