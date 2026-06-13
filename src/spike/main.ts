@@ -12,6 +12,7 @@
  * (Re)generate the tiles: `node scripts/railTiles.mjs`
  */
 import { Application, Assets, Container, Graphics, Sprite, type Texture } from "pixi.js";
+import stationMeta from "./assets/stations.json";
 
 const TW = 128; // iso tile width (pixels) — tiles are authored at 2× for detail
 const TH = 64; // iso tile height — 2:1 classic iso
@@ -51,6 +52,8 @@ async function main() {
   const art = makeArt(app);
   const track = await loadTrack();
   const trains = await loadTrains();
+  const platforms = await loadPlatforms();
+  const stations = await loadStations();
 
   // --- ground tiles -----------------------------------------------------
   const isWater = (gy: number) => gy >= 9; // a thin strip of "estuary"
@@ -79,6 +82,30 @@ async function main() {
     s.zIndex = gx + gy + (tall ? 0.2 : 0.1); // just above the ground in the cell
     world.addChild(s);
   }
+
+  // --- a station spur: a straight track with an NE platform + a building -
+  const SPUR_GY = 8;
+  for (let gx = 1; gx <= 3; gx++) {
+    const t = new Sprite(track.straight_a);
+    t.anchor.set(0.5, 0.5);
+    t.x = isoX(gx, SPUR_GY);
+    t.y = isoY(gx, SPUR_GY);
+    t.zIndex = gx + SPUR_GY + 0.1;
+    world.addChild(t);
+    const p = new Sprite(platforms.platform_a_ne);
+    p.anchor.set(0.5, 0.75);
+    p.x = isoX(gx, SPUR_GY);
+    p.y = isoY(gx, SPUR_GY);
+    p.zIndex = gx + SPUR_GY + 0.2;
+    world.addChild(p);
+  }
+  const meta = stationMeta.station_large;
+  const st = new Sprite(stations.station_large);
+  st.anchor.set(meta.anchor[0], meta.anchor[1]);
+  st.x = isoX(2, SPUR_GY) + 34; // nudge onto the NE platform
+  st.y = isoY(2, SPUR_GY) - 17;
+  st.zIndex = 2 + SPUR_GY + 0.3;
+  world.addChild(st);
 
   // --- the train: a boxy Class 150 sprite, swapped per heading ----------
   const train = new Sprite(trains.a);
@@ -180,6 +207,34 @@ async function loadTrains(): Promise<{ a: Texture; b: Texture }> {
     byName[name] = tex;
   }
   return { a: byName.train_a, b: byName.train_b };
+}
+
+// platform overlays (raised slabs, 4 facings) — tall tiles like the signals
+async function loadPlatforms(): Promise<Record<string, Texture>> {
+  const urls = import.meta.glob("./assets/platform_*.png", {
+    eager: true, query: "?url", import: "default",
+  }) as Record<string, string>;
+  const out: Record<string, Texture> = {};
+  for (const [path, url] of Object.entries(urls)) {
+    const tex = (await Assets.load(url)) as Texture;
+    tex.source.scaleMode = "nearest";
+    out[path.split("/").pop()!.replace(".png", "")] = tex;
+  }
+  return out;
+}
+
+// station buildings (small/medium/large); placement anchors live in stations.json
+async function loadStations(): Promise<Record<string, Texture>> {
+  const urls = import.meta.glob("./assets/station_*.png", {
+    eager: true, query: "?url", import: "default",
+  }) as Record<string, string>;
+  const out: Record<string, Texture> = {};
+  for (const [path, url] of Object.entries(urls)) {
+    const tex = (await Assets.load(url)) as Texture;
+    tex.source.scaleMode = "nearest";
+    out[path.split("/").pop()!.replace(".png", "")] = tex;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
