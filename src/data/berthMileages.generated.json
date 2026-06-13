@@ -1,1 +1,833 @@
-{}
+{
+  "EX:E085": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": 1,
+    "crs": "TAU",
+    "platform": "4"
+  },
+  "EX:E185": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": 1,
+    "crs": "TAU",
+    "platform": "5"
+  },
+  "EX:E285": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": 1,
+    "crs": "TAU",
+    "platform": "3"
+  },
+  "EX:E385": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": 1,
+    "crs": "TAU",
+    "platform": "2"
+  },
+  "EX:E189": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": 1,
+    "crs": "TAU",
+    "platform": "5"
+  },
+  "EX:E289": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": 1,
+    "crs": "TAU",
+    "platform": "3"
+  },
+  "EX:E389": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": 1,
+    "crs": "TAU",
+    "platform": "2"
+  },
+  "EX:E089": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": 1,
+    "crs": "TAU",
+    "platform": "4"
+  },
+  "EX:E485": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "crs": "TAU",
+    "platform": "6"
+  },
+  "EX:E120": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": -1,
+    "crs": "TAU",
+    "platform": "2"
+  },
+  "EX:E118": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "crs": "TAU",
+    "platform": "2"
+  },
+  "EX:E020": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": -1,
+    "crs": "TAU",
+    "platform": "3"
+  },
+  "EX:E022": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": -1,
+    "crs": "TAU",
+    "platform": "3"
+  },
+  "EX:E322": {
+    "line": "taunton",
+    "miles": 143,
+    "chains": 0,
+    "dir": -1,
+    "crs": "TAU",
+    "platform": "2"
+  },
+  "EX:U175": {
+    "line": "taunton",
+    "miles": 159,
+    "chains": 16,
+    "dir": 1,
+    "crs": "TVP",
+    "platform": "2"
+  },
+  "EX:U176": {
+    "line": "taunton",
+    "miles": 159,
+    "chains": 16,
+    "dir": 1,
+    "crs": "TVP",
+    "platform": "2"
+  },
+  "EX:177B": {
+    "line": "taunton",
+    "miles": 159,
+    "chains": 16,
+    "dir": -1,
+    "crs": "TVP",
+    "platform": "1"
+  },
+  "EX:177A": {
+    "line": "taunton",
+    "miles": 159,
+    "chains": 16,
+    "crs": "TVP",
+    "platform": "1"
+  },
+  "EX:E040": {
+    "line": "taunton",
+    "miles": 159,
+    "chains": 16,
+    "dir": -1,
+    "crs": "TVP",
+    "platform": "1"
+  },
+  "EX:E041": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "dir": -1,
+    "crs": "EXD",
+    "platform": "5"
+  },
+  "EX:E137": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "crs": "EXD",
+    "platform": "6"
+  },
+  "EX:E035": {
+    "line": "newton-abbot",
+    "miles": 174,
+    "chains": 32,
+    "dir": -1,
+    "crs": "EXT",
+    "platform": "2"
+  },
+  "EX:E237": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "crs": "EXD",
+    "platform": "4"
+  },
+  "EX:E337": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "dir": -1,
+    "crs": "EXD",
+    "platform": "3"
+  },
+  "EX:E437": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "dir": -1,
+    "crs": "EXD",
+    "platform": "1"
+  },
+  "EX:E037": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "crs": "EXD",
+    "platform": "5"
+  },
+  "EX:E360": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "dir": 1,
+    "crs": "EXD",
+    "platform": "5"
+  },
+  "EX:E060": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "dir": 1,
+    "crs": "EXD",
+    "platform": "4"
+  },
+  "EX:E460": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "dir": 1,
+    "crs": "EXD",
+    "platform": "6"
+  },
+  "EX:E260": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "crs": "EXD",
+    "platform": "3"
+  },
+  "EX:E160": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "crs": "EXD",
+    "platform": "1"
+  },
+  "EX:E335": {
+    "line": "exmouth",
+    "miles": 0,
+    "chains": 44,
+    "dir": 1,
+    "crs": "EXC",
+    "platform": "2"
+  },
+  "EX:E537": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "dir": 1,
+    "crs": "EXD",
+    "platform": "2"
+  },
+  "EX:E056": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "crs": "EXD",
+    "platform": "6"
+  },
+  "EX:E256": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "crs": "EXD",
+    "platform": "5"
+  },
+  "EX:E062": {
+    "line": "newton-abbot",
+    "miles": 174,
+    "chains": 32,
+    "dir": 1,
+    "crs": "EXT",
+    "platform": "1"
+  },
+  "EX:E213": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "dir": 1,
+    "crs": "EXD",
+    "platform": "1"
+  },
+  "EX:E313": {
+    "line": "newton-abbot",
+    "miles": 173,
+    "chains": 56,
+    "dir": 1,
+    "crs": "EXD",
+    "platform": "1"
+  },
+  "EX:E215": {
+    "line": "exmouth",
+    "miles": 0,
+    "chains": 44,
+    "dir": -1,
+    "crs": "EXC",
+    "platform": "3"
+  },
+  "EX:E315": {
+    "line": "exmouth",
+    "miles": 0,
+    "chains": 44,
+    "dir": -1,
+    "crs": "EXC",
+    "platform": "2"
+  },
+  "EX:EJTX": {
+    "line": "exmouth",
+    "miles": 0,
+    "chains": 44,
+    "dir": -1,
+    "crs": "EXC",
+    "platform": "2"
+  },
+  "EX:415A": {
+    "line": "exmouth",
+    "miles": 0,
+    "chains": 44,
+    "dir": 1,
+    "crs": "EXC",
+    "platform": "1"
+  },
+  "EX:E312": {
+    "line": "exmouth",
+    "miles": 0,
+    "chains": 44,
+    "dir": 1,
+    "crs": "EXC",
+    "platform": "2"
+  },
+  "EX:E310": {
+    "line": "exmouth",
+    "miles": 1,
+    "chains": 24,
+    "dir": 1,
+    "crs": "SJP",
+    "platform": "1"
+  },
+  "EX:415B": {
+    "line": "exmouth",
+    "miles": 0,
+    "chains": 44,
+    "dir": 1,
+    "crs": "EXC",
+    "platform": "1"
+  },
+  "EX:EJ1A": {
+    "line": "exmouth",
+    "miles": 1,
+    "chains": 24,
+    "crs": "SJP",
+    "platform": "1"
+  },
+  "EX:E415": {
+    "line": "exmouth",
+    "miles": 1,
+    "chains": 24,
+    "dir": 1,
+    "crs": "SJP",
+    "platform": "1"
+  },
+  "EX:E033": {
+    "line": "newton-abbot",
+    "miles": 174,
+    "chains": 32,
+    "dir": -1,
+    "crs": "EXT",
+    "platform": "2"
+  },
+  "EX:E031": {
+    "line": "newton-abbot",
+    "miles": 174,
+    "chains": 32,
+    "crs": "EXT",
+    "platform": "2"
+  },
+  "EX:E558": {
+    "line": "newton-abbot",
+    "miles": 174,
+    "chains": 32,
+    "crs": "EXT",
+    "platform": "1"
+  },
+  "EX:E196": {
+    "line": "newton-abbot",
+    "miles": 174,
+    "chains": 32,
+    "dir": 1,
+    "crs": "EXT",
+    "platform": "1"
+  },
+  "EX:D196": {
+    "line": "newton-abbot",
+    "miles": 174,
+    "chains": 32,
+    "dir": 1,
+    "crs": "EXT",
+    "platform": "1"
+  },
+  "EX:U202": {
+    "line": "newton-abbot",
+    "miles": 181,
+    "chains": 40,
+    "dir": -1,
+    "crs": "SCS",
+    "platform": "2"
+  },
+  "EX:E025": {
+    "line": "newton-abbot",
+    "miles": 184,
+    "chains": 24,
+    "dir": -1,
+    "crs": "DWW",
+    "platform": "2"
+  },
+  "EX:U201": {
+    "line": "newton-abbot",
+    "miles": 181,
+    "chains": 40,
+    "dir": -1,
+    "crs": "SCS",
+    "platform": "2"
+  },
+  "EX:203A": {
+    "line": "newton-abbot",
+    "miles": 181,
+    "chains": 40,
+    "dir": 1,
+    "crs": "SCS",
+    "platform": "1"
+  },
+  "EX:D202": {
+    "line": "newton-abbot",
+    "miles": 181,
+    "chains": 40,
+    "crs": "SCS",
+    "platform": "1"
+  },
+  "EX:203B": {
+    "line": "newton-abbot",
+    "miles": 181,
+    "chains": 40,
+    "dir": 1,
+    "crs": "SCS",
+    "platform": "1"
+  },
+  "EX:E123": {
+    "line": "newton-abbot",
+    "miles": 184,
+    "chains": 24,
+    "dir": -1,
+    "crs": "DWW",
+    "platform": "2"
+  },
+  "EX:E021": {
+    "line": "newton-abbot",
+    "miles": 184,
+    "chains": 24,
+    "crs": "DWW",
+    "platform": "2"
+  },
+  "EX:E023": {
+    "line": "newton-abbot",
+    "miles": 184,
+    "chains": 24,
+    "dir": -1,
+    "crs": "DWW"
+  },
+  "EX:E170": {
+    "line": "newton-abbot",
+    "miles": 184,
+    "chains": 24,
+    "dir": 1,
+    "crs": "DWW",
+    "platform": "1"
+  },
+  "EX:E068": {
+    "line": "newton-abbot",
+    "miles": 184,
+    "chains": 24,
+    "crs": "DWW",
+    "platform": "1"
+  },
+  "EX:E070": {
+    "line": "newton-abbot",
+    "miles": 184,
+    "chains": 24,
+    "dir": 1,
+    "crs": "DWW"
+  },
+  "EX:E072": {
+    "line": "newton-abbot",
+    "miles": 184,
+    "chains": 24,
+    "dir": 1,
+    "crs": "DWW",
+    "platform": "1"
+  },
+  "EX:E272": {
+    "line": "newton-abbot",
+    "miles": 184,
+    "chains": 24,
+    "dir": 1,
+    "crs": "DWW",
+    "platform": "1"
+  },
+  "EX:E017": {
+    "line": "newton-abbot",
+    "miles": 185,
+    "chains": 64,
+    "dir": -1,
+    "crs": "DWL",
+    "platform": "2"
+  },
+  "EX:U206": {
+    "line": "newton-abbot",
+    "miles": 185,
+    "chains": 64,
+    "crs": "DWL",
+    "platform": "2"
+  },
+  "EX:E019": {
+    "line": "newton-abbot",
+    "miles": 185,
+    "chains": 64,
+    "dir": -1,
+    "crs": "DWL",
+    "platform": "2"
+  },
+  "EX:D206": {
+    "line": "newton-abbot",
+    "miles": 185,
+    "chains": 64,
+    "dir": 1,
+    "crs": "DWL",
+    "platform": "1"
+  },
+  "EX:E276": {
+    "line": "newton-abbot",
+    "miles": 185,
+    "chains": 64,
+    "dir": 1,
+    "crs": "DWL",
+    "platform": "2"
+  },
+  "EX:D207": {
+    "line": "newton-abbot",
+    "miles": 185,
+    "chains": 64,
+    "dir": 1,
+    "crs": "DWL",
+    "platform": "1"
+  },
+  "EX:U208": {
+    "line": "newton-abbot",
+    "miles": 188,
+    "chains": 24,
+    "dir": -1,
+    "crs": "TGM",
+    "platform": "2"
+  },
+  "EX:E015": {
+    "line": "newton-abbot",
+    "miles": 188,
+    "chains": 24,
+    "crs": "TGM",
+    "platform": "2"
+  },
+  "EX:U207": {
+    "line": "newton-abbot",
+    "miles": 188,
+    "chains": 24,
+    "dir": -1,
+    "crs": "TGM",
+    "platform": "2"
+  },
+  "EX:E078": {
+    "line": "newton-abbot",
+    "miles": 188,
+    "chains": 24,
+    "dir": 1,
+    "crs": "TGM",
+    "platform": "1"
+  },
+  "EX:D208": {
+    "line": "newton-abbot",
+    "miles": 188,
+    "chains": 24,
+    "crs": "TGM",
+    "platform": "1"
+  },
+  "EX:E278": {
+    "line": "newton-abbot",
+    "miles": 188,
+    "chains": 24,
+    "dir": 1,
+    "crs": "TGM",
+    "platform": "1"
+  },
+  "EX:D209": {
+    "line": "newton-abbot",
+    "miles": 188,
+    "chains": 24,
+    "dir": 1,
+    "crs": "TGM",
+    "platform": "1"
+  },
+  "EX:E011": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "dir": -1,
+    "crs": "NTA",
+    "platform": "3"
+  },
+  "EX:E109": {
+    "line": "paignton",
+    "miles": 197,
+    "chains": 48,
+    "dir": -1,
+    "crs": "TRR",
+    "platform": "2"
+  },
+  "EX:E211": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "dir": -1,
+    "crs": "NTA",
+    "platform": "2"
+  },
+  "EX:E111": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "dir": -1,
+    "crs": "NTA",
+    "platform": "1"
+  },
+  "EX:E009": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "crs": "NTA",
+    "platform": "3"
+  },
+  "EX:E013": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "dir": -1,
+    "crs": "NTA",
+    "platform": "3"
+  },
+  "EX:E088": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "dir": 1,
+    "crs": "NTA",
+    "platform": "2"
+  },
+  "EX:E086": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "crs": "NTA",
+    "platform": "2"
+  },
+  "EX:E188": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "dir": 1,
+    "crs": "NTA",
+    "platform": "1"
+  },
+  "EX:E388": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "dir": 1,
+    "crs": "NTA",
+    "platform": "3"
+  },
+  "EX:E386": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "crs": "NTA",
+    "platform": "3"
+  },
+  "EX:E190": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "dir": 1,
+    "crs": "NTA",
+    "platform": "1"
+  },
+  "EX:E090": {
+    "line": "newton-abbot",
+    "miles": 194,
+    "chains": 0,
+    "dir": 1,
+    "crs": "NTA",
+    "platform": "3"
+  },
+  "EX:UT18": {
+    "line": "paignton",
+    "miles": 197,
+    "chains": 48,
+    "dir": -1,
+    "crs": "TRR",
+    "platform": "2"
+  },
+  "EX:UT19": {
+    "line": "paignton",
+    "miles": 198,
+    "chains": 48,
+    "dir": -1,
+    "crs": "TQY",
+    "platform": "2"
+  },
+  "EX:DT19": {
+    "line": "paignton",
+    "miles": 197,
+    "chains": 48,
+    "dir": 1,
+    "crs": "TRR",
+    "platform": "1"
+  },
+  "EX:DT20": {
+    "line": "paignton",
+    "miles": 198,
+    "chains": 48,
+    "dir": 1,
+    "crs": "TQY",
+    "platform": "1"
+  },
+  "EX:PN1A": {
+    "line": "paignton",
+    "miles": 198,
+    "chains": 48,
+    "crs": "TQY",
+    "platform": "2"
+  },
+  "EX:STIN": {
+    "line": "paignton",
+    "miles": 198,
+    "chains": 48,
+    "crs": "TQY",
+    "platform": "2"
+  },
+  "EX:PNLS": {
+    "line": "paignton",
+    "miles": 198,
+    "chains": 48,
+    "dir": 1,
+    "crs": "TQY",
+    "platform": "1"
+  },
+  "EX:E003": {
+    "line": "newton-abbot",
+    "miles": 202,
+    "chains": 48,
+    "dir": -1,
+    "crs": "TOT"
+  },
+  "EX:E001": {
+    "line": "newton-abbot",
+    "miles": 202,
+    "chains": 48,
+    "crs": "TOT"
+  },
+  "EX:E203": {
+    "line": "newton-abbot",
+    "miles": 202,
+    "chains": 48,
+    "dir": -1,
+    "crs": "TOT",
+    "platform": "2"
+  },
+  "EX:E005": {
+    "line": "newton-abbot",
+    "miles": 202,
+    "chains": 48,
+    "dir": -1,
+    "crs": "TOT"
+  },
+  "EX:E198": {
+    "line": "newton-abbot",
+    "miles": 202,
+    "chains": 48,
+    "dir": 1,
+    "crs": "TOT",
+    "platform": "1"
+  },
+  "EX:E096": {
+    "line": "newton-abbot",
+    "miles": 202,
+    "chains": 48,
+    "crs": "TOT",
+    "platform": "1"
+  },
+  "EX:E098": {
+    "line": "newton-abbot",
+    "miles": 202,
+    "chains": 48,
+    "dir": 1,
+    "crs": "TOT"
+  },
+  "EX:E298": {
+    "line": "newton-abbot",
+    "miles": 202,
+    "chains": 48,
+    "dir": 1,
+    "crs": "TOT",
+    "platform": "2"
+  },
+  "EX:5601": {
+    "line": "newton-abbot",
+    "miles": 202,
+    "chains": 48,
+    "dir": 1,
+    "crs": "TOT"
+  }
+}

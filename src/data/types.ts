@@ -36,6 +36,18 @@ export type Line = {
   drawOffset?: number;
 };
 
+/** Real formation data from the Darwin push port (attached server-side). */
+export type TrainFormation = {
+  /** Actual number of coaches in the unit(s) working this service. */
+  coaches: number;
+  /** How many of those are First class (or composite), when known. */
+  first?: number;
+  /** Average loading across coaches, 0–100 %, from the latest calling point. */
+  loading?: number;
+  /** Data source tag, e.g. "darwin". */
+  src?: string;
+};
+
 /** A train currently somewhere on the network. */
 export type Train = {
   id: string;
@@ -55,8 +67,13 @@ export type Train = {
   headingTo: string;
   /** TD berth the train currently occupies (live feed only). */
   berth?: string;
+  /** Real coach count / loading from Darwin (live feed only, when available). */
+  formation?: TrainFormation;
   /** Platform the train is standing at, from SMART berth data (live only). */
   platform?: string;
+  /** CRS of the station that platform belongs to (e.g. "EXD") — together with
+   *  `platform` this parks the train on the station's modelled platform lane. */
+  station?: string;
   /**
    * Exact geographic position, when we have real berth coordinates. If set, the
    * train is rendered here (and faces its direction of travel) instead of being

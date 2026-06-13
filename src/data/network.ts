@@ -160,7 +160,8 @@ const HAND_GEOMETRY: Record<string, LatLng[]> = {
   ],
 };
 
-const osmGeometry = lineGeometryJson as Record<string, [number, number][]>;
+// JSON number arrays infer as number[][]; assert the [lat,lng] tuple shape.
+const osmGeometry = lineGeometryJson as unknown as Record<string, [number, number][]>;
 
 function geometryFor(id: string, stops: string[]): LatLng[] {
   // Verified, baked geometry is the source of truth — reliable and independent

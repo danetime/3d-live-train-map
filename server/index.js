@@ -6,7 +6,9 @@
  *   CAPTURE=1 node --env-file=.env ...  → LIVE + log observed berths
  *
  * Browsers connect over WebSocket on WS_PORT and receive { type: "trains",
- * trains: [{ headcode, area, berth, updatedAt }] } snapshots once a second.
+ * trains: [{ headcode, area, berth, updatedAt }] } snapshots once a second,
+ * enriched with { toc, dest } from the CIF schedule and (when the DARWIN_*
+ * env is set) { formation } — real coach count + loading from Darwin.
  */
 import { BerthState } from "./lib/berthState.js";
 import { startWsServer } from "./lib/wsServer.js";
@@ -29,10 +31,47 @@ const state = new BerthState();
 // Attach operator + destination from the Network Rail schedule (headcode →
 // { toc, dest }). No-ops gracefully until `npm run schedule` has run.
 const schedule = loadSchedule();
+
+// Darwin push port (Rail Data Marketplace, Kafka): real formations + loading.
+// Optional — needs the DARWIN_* values in .env (see .env.example).
+const darwinConfigured =
+  process.env.DARWIN_BROKERS &&
+  process.env.DARWIN_USERNAME &&
+  process.env.DARWIN_PASSWORD &&
+  process.env.DARWIN_TOPIC;
+let darwin = null;
+if (darwinConfigured) {
+  const { DarwinState } = await import("./lib/darwinState.js");
+  const { startDarwin } = await import("./lib/darwinClient.js");
+  darwin = new DarwinState(schedule);
+  darwin.loadFromDisk();
+  darwin.startTimers();
+  // Not awaited: a slow/unreachable broker must never hold up the TD bridge.
+  startDarwin({
+    brokers: process.env.DARWIN_BROKERS.split(",").map((s) => s.trim()).filter(Boolean),
+    username: process.env.DARWIN_USERNAME,
+    password: process.env.DARWIN_PASSWORD,
+    topic: process.env.DARWIN_TOPIC,
+    groupId: process.env.DARWIN_GROUP || "exeter-train-map",
+    fromBeginning: (process.env.DARWIN_OFFSET || "latest") === "earliest",
+    mechanism: process.env.DARWIN_SASL || "plain",
+    debug: Boolean(process.env.DARWIN_DEBUG),
+    onMessage: (inner) => (inner ? darwin.apply(inner) : darwin.stats.undecodable++),
+  }).catch((e) => console.error("[darwin] startup failed:", e.message));
+  console.log(
+    `[darwin] formations enabled: ${process.env.DARWIN_TOPIC} ` +
+      `(group ${process.env.DARWIN_GROUP || "exeter-train-map"}, offset ${process.env.DARWIN_OFFSET || "latest"})`,
+  );
+}
+
 const enrich = (trains) =>
   trains.map((t) => {
     const info = schedule.lookup(t.headcode);
-    return info ? { ...t, toc: info.toc, dest: info.dest } : t;
+    const formation = darwin?.lookup(t.headcode);
+    let out = t;
+    if (info) out = { ...out, toc: info.toc, dest: info.dest };
+    if (formation) out = { ...out, formation };
+    return out;
   });
 
 const { broadcast } = startWsServer(PORT, () => enrich(state.trains()));
@@ -90,4 +129,14 @@ if (live) {
       console.log(`[td] (no matches) area codes seen in feed: ${top || "none yet"}`);
     }
   }, 20000);
+}
+
+// Darwin heartbeat: message mix, correlation coverage, and how many of the
+// trains we're actually tracking have a live formation attached.
+if (darwin) {
+  setInterval(() => {
+    const tracked = state.trains();
+    const attached = tracked.filter((t) => darwin.lookup(t.headcode)).length;
+    console.log(`[darwin] ${darwin.summary()} · attached ${attached}/${tracked.length} tracked trains`);
+  }, 30000);
 }

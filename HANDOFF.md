@@ -15,7 +15,7 @@ red/green aspects.
 
 **Stack**
 - **Client:** React 18 + `@react-three/fiber` / `drei` (Three.js), Vite, TypeScript, Zustand store.
-- **Server:** Node (ESM) bridge in `/server` — subscribes to Network Rail STOMP feeds and fans out train snapshots to the browser over a WebSocket.
+- **Server:** Node (ESM) bridge in `/server` — subscribes to the Network Rail STOMP feed (TD berths) and optionally the Darwin Kafka feed (formations, §9), and fans out enriched train snapshots to the browser over a WebSocket.
 - **Data scripts:** Node scripts under `/server/scripts` that download Network Rail reference/feed files and bake lookup tables into `/src/data`.
 
 **Two ways trains can be sourced** (`src/sim/useTrainFeed.ts`):
@@ -69,6 +69,7 @@ npm run schedule       # builds data/headcodeSchedule.generated.json (headcode�
 | **Signals (numbers + positions)** | `src/data/realSignals.ts` |
 | Signal rendering + red/green logic | `src/scene/Signals.tsx` |
 | Berth → position + direction | `src/data/berthMileages.ts`, `src/data/berths.ts`, `src/data/berthMileages.generated.json` |
+| Station platform lanes (frame shared by drawing + train parking) | `src/data/stationLayouts.ts`, `src/scene/StationDetail.tsx` |
 | TD WebSocket client | `src/services/networkRailTd.ts` |
 | Operator name + stock inference | `src/data/rollingStock.ts` |
 | Camera / controls / themes | `src/scene/World.tsx` |
@@ -76,6 +77,8 @@ npm run schedule       # builds data/headcodeSchedule.generated.json (headcode�
 | Store | `src/store/useTrainStore.ts` |
 | Server entry | `server/index.js` |
 | Server schedule loader | `server/lib/schedule.js` |
+| Darwin Kafka consumer | `server/lib/darwinClient.js` |
+| Darwin formation state + correlation | `server/lib/darwinState.js` |
 | Berth generator | `server/scripts/buildAllBerths.js` |
 | Schedule generator | `server/scripts/buildSchedule.js` |
 
@@ -217,6 +220,31 @@ signals and must not show a main aspect. If new lists include them, flag and dro
 - Direction: prefer the berth's own SMART direction; else infer from movement
   (`src/services/networkRailTd.ts`).
 
+### Platform parking — Exeter St David's (BUILT)
+
+Berth tables now carry **`crs` + `platform`**: hand rows in `berthMileages.ts`
+cover all EXD platform berths in both directions (a platform's TD berth is
+named for its starting signal — down E160/E260/E060/E360/E460 = P1/3/4/5/6, up
+E137/E037/E237/E337/E437/E537 = P6/5/4/3/1/2), and `buildAllBerths.js` now also
+emits SMART's PLATFORM column for every generated berth (**needs a re-run**).
+
+`src/data/stationLayouts.ts` defines EXD's local frame + per-platform track-lane
+X offsets, shared by `StationDetail.tsx` (drawing; numbers sit beside their
+faces) and `Train.tsx` (a third placement mode: when a train's berth has
+crs+platform and the station is modelled, it glides onto that lane instead of
+stacking on the station dot). Clicking the station (amber disc at the hub, any
+zoom — or the platform model itself) selects it: the camera does a one-shot
+bird's-eye glide overhead (then orbit/zoom are free again) and the HUD shows a
+P1–P6 occupancy list (tap a row to select that train). `selectedStation` in the
+store is mutually exclusive with train/signal selection.
+
+Replay mode demos it with zero creds: each line's `*01` demo berth is EXD with
+a platform (main 4, taunton 5, exmouth 1, paignton 6).
+
+**DISCOVERY:** the committed `src/data/berthMileages.generated.json` is an
+EMPTY placeholder — the user's 108-berth run only ever existed on their Mac.
+Next `npm run berths:all` (now with platforms) should be **committed + pushed**.
+
 ---
 
 ## 8. Operator + destination — NR-NATIVE (RTT was abandoned)
@@ -256,18 +284,63 @@ using the Network Rail **SCHEDULE (CIF)** feed the user already has access to.
 - CrossCountry → Class 220/221 Voyager (4–5 cars)
 - SWR → Class 158/159 (3 cars)
 
-**Hard truth:** the **exact unit class** ("Class 800") and **unit number**
-("802006") are **not in any open feed** — not RTT, NR, or Darwin. Only an
-inference is possible.
+**Hard truth:** the **unit number** ("802006") is **not in any open feed** — and
+the unit class is never named either; but with Darwin's real coach count the
+class inference becomes near-certain (9-car GWR main line ⇒ IET).
 
-**NEXT BUILD — Darwin formations (the user chose: signals first, then Darwin):**
-Darwin (National Rail, free via the Rail Data Marketplace; STOMP push port like
-the NR feed) provides **real carriage counts, First/Standard split, and live
-loading**. That replaces the estimated car count with the true number and makes
-the class inference near-certain (e.g. confirmed 9-car GWR main line ⇒ Class
-800/802). Build = register, consume the push port, parse formation messages,
-correlate to our trains by service RID/headcode. Coverage good for GWR, patchier
-elsewhere.
+### Darwin formations — BUILT (awaiting first live run)
+
+**Transport reality check (the old §9 was wrong):** the Rail Data Marketplace
+serves Darwin over **Kafka + JSON only — there is no STOMP option** (STOMP/XML
+was the legacy National Rail feed). Confirmed from the official client repo
+(`raildatamarketplace/rdm-darwin-kafka-client`): SASL_SSL, mechanism **PLAIN**,
+username/password = the subscription's **Consumer key/secret**, message value =
+UTF-8 JSON envelope with the Pport message nested as a JSON **string** in its
+`bytes` field.
+
+**Server** (all optional — without `DARWIN_*` env everything runs as before):
+- `server/lib/darwinClient.js` — kafkajs consumer (lazy-imported like stompit;
+  non-blocking at boot; throttled one-line kafka errors). Defensive decode:
+  `bytes`-JSON, base64, gzip, and raw-XML detection. `DARWIN_DEBUG=1` saves the
+  first raw messages (+ first scheduleFormations/formationLoading) to
+  `server/data/darwinSamples/` for wire-shape inspection.
+- `server/lib/darwinState.js` — parses Pport-as-JSON with tolerant helpers
+  (`attr`/`textOf`/`collectDeep` accept plain/`@`/`@_`/`$`-bag conventions since
+  RDM's XML→JSON conversion is undocumented). Tracks per-RID records; correlates
+  RID→headcode two ways: Darwin `schedule.trainId` directly, and `TS.uid` → CIF
+  UID → headcode (works for trains already running at startup). Scores
+  candidates when an all-UK headcode collides (today's ssd, TOC match, has
+  data). Coach count falls back to counting `formationLoading` coaches when no
+  `scheduleFormations` was seen. Checkpoints formation/loading records to
+  `server/data/darwinState.generated.json` every minute (Darwin only re-sends on
+  change, so restarts must not forget).
+- `buildSchedule.js` now writes `uid` per working and `schedule.js` exposes
+  `headcodeForUid`/`tocFor`/`has` — **re-run `npm run schedule` once** so the
+  table gains UIDs.
+- `index.js` attaches `formation: { coaches, first?, loading?, src: "darwin" }`
+  to every matched train in the WS feed and logs a `[darwin]` summary line every
+  30 s (message mix · rids · on-patch headcodes · attached/tracked) — that's the
+  line to paste back.
+
+**Client:** `Train.formation` (types.ts) flows through `networkRailTd.ts`;
+`inferStock()` (rollingStock.ts) sharpens the class from a live count (4 ⇒ 220,
+5 ⇒ 221, 9 ⇒ IET, 10 ⇒ 2× IET, short GWR "express" ⇒ actually a Sprinter) and
+the panel (Hud.tsx) drops "est.", marks "(live)", and shows `n× First` and
+`~NN% full` when present.
+
+**User setup (on the Mac):** subscribe (free) to "Darwin Real Time Train
+Information (PubSub)" at <https://raildata.org.uk> → copy the connection values
+into `server/.env` (`DARWIN_BROKERS/USERNAME/PASSWORD/TOPIC`, see
+`.env.example`) → `cd server && npm install` → `npm run schedule` → `npm run
+live`, first time ideally with `DARWIN_DEBUG=1`. Paste back the `[darwin]`
+lines and one file from `data/darwinSamples/` so the parser can be tightened
+against the real wire shape.
+
+**Open:** exact RDM JSON field conventions unverified until that first run (the
+parser is deliberately convention-tolerant); `DARWIN_OFFSET=earliest` would
+replay the all-UK backlog to catch overnight formation messages (heavy — default
+`latest` relies on intra-day formation/loading traffic, which GWR sends
+constantly). Coverage good for GWR, patchier elsewhere.
 
 ---
 
@@ -280,6 +353,9 @@ elsewhere.
 - **Selecting a train** eases once into an oblique 3/4 framing, then **follows**
   the train by translating the camera with its motion — **orbit & zoom stay under
   user control** (no forced top-down snap-back). `CameraRig` in `World.tsx`.
+- **Selecting a station** (EXD only so far) glides once to a bird's-eye view
+  ~36 units up, slightly north of nadir so the platform numbers read upright,
+  then releases control. Station detail force-renders while selected.
 - **Controls** (OrbitControls, Mac-trackpad friendly): **left-drag / one finger =
   PAN**, **right-drag / two-finger = ROTATE**, wheel/pinch = zoom. (Possible
   follow-up: bind rotate to hold-key+drag if right-drag feels fiddly.)
@@ -290,9 +366,10 @@ elsewhere.
 
 ## 11. Conventions & workflow
 
-- **Branch:** `claude/train-tracking-3d-app-jrr3lr`. Develop here, commit with
-  clear messages, push (`git push -u origin <branch>`). Do **not** open PRs unless
-  asked.
+- **Branch:** `claude/nifty-goldberg-1ubft1` (continues from
+  `claude/train-tracking-3d-app-jrr3lr`). Develop on the session's designated
+  branch, commit with clear messages, push (`git push -u origin <branch>`). Do
+  **not** open PRs unless asked.
 - **CI gate:** keep `npm run build` (`tsc -b && vite build`) green before pushing.
 - **The user runs the live feed + big downloads on their own Mac** and pastes the
   summary lines; iterate from there. The dev container cannot reach the live feed.
@@ -302,15 +379,94 @@ elsewhere.
 
 ## 12. Open items / TODO (priority-ish)
 
-1. **Darwin formations** — accurate carriage counts (the agreed next build, §9).
+1. **Darwin formations — built; verify against the live feed** (§9): user
+   registers on raildata.org.uk, fills `DARWIN_*` in `server/.env`, re-runs
+   `npm run schedule` (UIDs), runs `npm run live` with `DARWIN_DEBUG=1`, pastes
+   the `[darwin]` lines + a `darwinSamples/` file; tighten the parser from that.
 2. **Taunton & Exmouth signals** — still eyeballed; transcribe real numbers + drop
    their synthetic fill (§6).
 4. **Second TD area (Plymouth panel)** — to light up Plymouth/Ivybridge and
    extend coverage (§7).
 5. **St David's up-starter placement** at the junction throat — revisit if odd.
-6. **Per-platform train spread** — SMART gives each berth a platform but we peg
-   all of a station's berths to one mileage; needs lateral platform offsets in
-   the renderer (low priority — direction already splits the rails).
+6. **Per-platform train spread — DONE for Exeter St David's** (§7): trains park
+   on their platform lane, click-the-station bird's-eye + P1–P6 HUD panel.
+   Remaining: (a) user re-runs `npm run berths:all` and **commits the
+   regenerated `src/data/berthMileages.generated.json`** (adds SMART platforms
+   everywhere + restores the 108-berth coverage that was never pushed);
+   (b) lanes for other stations (NTA next) once their platform data is in.
 7. **Delete dead RTT code** (§8).
 8. **Land/Map mode UI polish** — the user intends to redesign UI/UX; Dev Mode is
    preserved as the stable view to fall back to.
+
+---
+
+## 13. Track-graph migration (AGREED DIRECTION — step 1 done)
+
+**Why:** the recurring "untidy junctions / overlapping lines" problem (worst at
+St David's↔Exeter Central) is not a signal or offset bug — it's the core model.
+Each line is an independent spline with no shared metals and no junctions, so
+routes that share track or diverge merely overlap on screen. The user chose
+(2026-06) to invest once in a **track graph** rather than keep patching splines.
+
+**Model:** NODES (stations/junctions/termini, keyed by CRS, shared across lines)
+joined by EDGES (a track segment between adjacent nodes, owning geometry,
+double-track capability and a mileage range). Trains ride edges and pick a path
+at each node, so junctions are explicit instead of overlapping. Signals/blocks
+and berth positions become edge-relative.
+
+**Staged plan (each step ships, app keeps working — no big-bang):**
+1. **DONE** — `src/data/trackGraph.ts`: graph types + `buildTrackGraph` from the
+   existing line data; helpers `edgePointAt`, `sampleEdge`, `lineTToEdge`
+   (legacy `(lineId,t)`→`(edge,s)` bridge for steps 3–4), `junctions`,
+   `trackGraphStats`. Edge geometry is an arc-length t-range on the CURRENT
+   spline, so it's byte-faithful; verified max deviation **2.6e-14** world units
+   over 400 samples/line. Auto-detects **EXD** and **NTA** as junctions; 26
+   nodes / 32 edges (7 = Paignton's shared trunk, `drawn:false`). Nothing renders
+   from it yet; no train/signal/render code touched. Re-run the check anytime
+   with the throwaway script pattern in the chat (tsx from project root).
+2. **DONE** — `RailNetwork.tsx` renders from the graph: `railRuns(lineId)` in
+   `trackGraph.ts` groups a line's drawn edges into continuous ribbons (merging
+   while `doubleTrack` matches; first/last edge clamps to t 0/1 to match the old
+   spline-end behaviour). Verified **0.0** vertex delta vs the old per-line tubes
+   — byte-identical. `GAUGE` still exported from `RailNetwork.tsx`. Each line is
+   one run today; later steps split runs without touching the renderer.
+3. **DONE** — `Train.tsx` spline mode resolves position + tangent via the graph
+   edge (`lineTToEdge` → `edgePointAt`/`edgeTangentAt`) instead of the line
+   curve. Verified identical: worst position Δ 2.5e-13, heading Δ 3.5e-13 over
+   500 samples × both directions × all lines. Lateral rail offset still
+   line/t-based (revisited once edges carry independent geometry). Point mode +
+   platform parking untouched.
+4. **DONE** — `Signals.tsx` derives each signal's double-track flag (rail offset
+   + same-direction-only occupancy) from the EDGE it sits on (`lineTToEdge`)
+   rather than the line. Verified identical over 1000 samples/line (no overrides
+   yet). Block stays line-t (trains are line-t; identical and survives step 5).
+5. **DONE** — network-wide double/single layout via `DOUBLE_TRACK_EDGES` in
+   `trackGraph.ts` (`Train.tsx` rail offset + signals read `edge.doubleTrack`):
+   - Main line (Plymouth↔Taunton): double (the `newton-abbot`/`taunton` line flag).
+   - Exmouth (Avocet): double St David's→Exeter Central, single beyond, with a
+     **Topsham passing loop** (double `NCO-TOP`,`TOP-EXN`) so up/down trains cross.
+   - Paignton (Riviera): double Newton Abbot (Aller Jn)→Paignton.
+   Verified per-line via `railRuns`. **Known rough edges (polish later):**
+   ~0.7-unit lateral hops at double↔single transitions (Central, the loop ends);
+   no points/turnout geometry where rails merge (may read as a pinch); the loop
+   spans NCO→EXN so it's longer than a real loop (stylised — can shorten).
+   **Data gaps:** Aller Jn is modelled as branching at NTA (the real divergence
+   is ~1mi south); the Waterloo/Pinhoe main the Exmouth branch leaves at Exmouth
+   Jn isn't modelled, so that fork can't be drawn without adding it as a new line.
+   Deferred: merge Paignton's duplicated EXD→NTA trunk edges; St David's platform
+   *tracks* (we have 6 platform faces + parking + bird's-eye, not 6 track roads).
+6. **PARKED** — the custom 3D area model backdrop. User's export was 250 MB
+   (too big for git AND too heavy for the browser to render); optimisation
+   (`gltf-transform optimize`) / re-export stalled, so the user chose to **skip
+   the GLB** and polish the built-in Map Mode instead. If revisited: GLB only
+   (native to Three.js via drei `useGLTF`; STL=geometry-only, 3MF=print-
+   oriented), optimise to <~40 MB, drop in `public/`, georeference via 2 known
+   points + metres scale. Git LFS is NOT a fix (solves storage, not the
+   render/load weight; this container likely won't pull LFS objects anyway).
+
+**Map Mode polish (in progress):** `src/scene/Ground.tsx` got a first pass —
+Devon farmland patchwork (`Fields`, instanced coloured quads off-water), varied
+tree greens (per-instance colour), and two-row hazing hills ringing the inland
+arc. Land-mode only; Dev Mode untouched. Water/Buildings/Clouds unchanged so far
+— candidates for the next pass (beach/shoreline, building variety, cloud
+shadows).

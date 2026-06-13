@@ -13,3 +13,5 @@ dist-ssr
 # (the committed corridor server/data/locations.csv and samples are kept)
 server/data/*.json
 server/data/sample/output.berthCoordinates.json
+# Darwin raw message samples (written when DARWIN_DEBUG=1)
+server/data/darwinSamples/

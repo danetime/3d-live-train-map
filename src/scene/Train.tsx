@@ -5,8 +5,10 @@ import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
 import type { Train as TrainModel } from "../data/types";
 import { LINE_BY_ID } from "../data/network";
-import { lineCurve, branchOffset, lineStopParams } from "../data/lineCurves";
+import { branchOffset, lineStopParams } from "../data/lineCurves";
+import { lineTToEdge, edgePointAt, edgeTangentAt } from "../data/trackGraph";
 import { project } from "../data/geo";
+import { platformStandWorld } from "../data/stationLayouts";
 import { GAUGE } from "./RailNetwork";
 import { useTrainStore } from "../store/useTrainStore";
 import { trainPositions } from "../sim/trainPositions";
@@ -198,7 +200,6 @@ export function Train({ train }: { train: TrainModel }) {
   const advance = useTrainStore((s) => s.advance);
   const select = useTrainStore((s) => s.select);
 
-  const curve = useMemo(() => lineCurve(train.lineId), [train.lineId]);
   const line = LINE_BY_ID.get(train.lineId)!;
   const selected = selectedId === train.id;
 
@@ -211,6 +212,14 @@ export function Train({ train }: { train: TrainModel }) {
     if (!group) return;
 
     let syncHeading = train.headingTo;
+
+    // Standing at a modelled station platform? Park on that platform's lane
+    // (overrides the spline point, where every berth of the station collapses
+    // onto one dot and trains stack).
+    const stand =
+      !train.pos && train.station && train.platform
+        ? platformStandWorld(train.station, train.platform, pos)
+        : null;
 
     if (train.pos) {
       // Point mode: we have exact berth coordinates. Ease to the position and
@@ -227,6 +236,22 @@ export function Train({ train }: { train: TrainModel }) {
       if (Math.hypot(dx, dz) > 0.02) {
         group.rotation.y = easeAngle(group.rotation.y, Math.atan2(dx, dz), 0.25);
       }
+    } else if (stand) {
+      // Platform mode: glide from wherever we are onto the platform lane and
+      // settle facing the through axis (by direction of travel). Keep tRef
+      // tracking the feed so departure resumes the spline without a jump.
+      if (!placed.current) {
+        group.position.set(pos.x, RIDE_HEIGHT, pos.z);
+        placed.current = true;
+      }
+      const dx = pos.x - group.position.x;
+      const dz = pos.z - group.position.z;
+      const k = Math.min(delta * 1.8, 1);
+      group.position.set(group.position.x + dx * k, RIDE_HEIGHT, group.position.z + dz * k);
+      dirRef.current = train.direction;
+      tRef.current += (train.t - tRef.current) * Math.min(delta * 2, 1);
+      const heading = stand.heading + (dirRef.current === 1 ? 0 : Math.PI);
+      group.rotation.y = easeAngle(group.rotation.y, heading, Math.min(delta * 4, 1));
     } else {
       // Spline mode. Mock trains self-propel (speed > 0); a live feed sets
       // speed 0 and updates train.t externally, which we ease toward.
@@ -247,15 +272,22 @@ export function Train({ train }: { train: TrainModel }) {
       }
 
       const t = THREE.MathUtils.clamp(tRef.current, 0.0001, 0.9999);
-      curve.getPointAt(t, pos);
-      curve.getTangentAt(t, tangent); // raw tangent
+      // Resolve position + tangent via the track graph's edge for this (line, t)
+      // — trains ride the graph, not the monolithic line spline, so when edges
+      // gain their own geometry (junction rework) trains follow without changes
+      // here. Identical today: edges are t-ranges on the same curve. The lateral
+      // rail offset stays line/t-based for now (revisited with edge geometry).
+      const { edge, s } = lineTToEdge(line.id, t)!;
+      edgePointAt(edge, s, pos);
+      edgeTangentAt(edge, s, tangent); // raw tangent
       const dir = dirRef.current;
-      // Double-track lines ride the rail for the current direction. A branch
-      // that shares the double-track trunk (the Riviera line, Exeter→Newton
-      // Abbot) also rides the trunk's up/down rail until it peels off at its
+      // Double-track EDGES ride the rail for the current direction (so a
+      // part-double line like Exmouth splits onto rails only where it's double).
+      // A branch that shares the double-track trunk (the Riviera line, Exeter→
+      // Newton Abbot) rides the trunk's up/down rail until it peels off at its
       // branch stop; beyond that it follows the single-track centreline.
       let lat: number;
-      if (line.doubleTrack) {
+      if (edge.doubleTrack) {
         lat = GAUGE * dir;
       } else if (line.drawFrom) {
         const tBranch = lineStopParams(line.id)[line.stops.indexOf(line.drawFrom)];
@@ -269,6 +301,7 @@ export function Train({ train }: { train: TrainModel }) {
       }
       group.position.set(pos.x, RIDE_HEIGHT, pos.z);
       group.rotation.y = Math.atan2(tangent.x * dir, tangent.z * dir);
+      placed.current = true; // a later platform/point mode glides from here
 
       // Mock trains flip heading at the termini; live trains keep the feed's.
       syncHeading =

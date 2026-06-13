@@ -14,9 +14,10 @@
  *   npm run schedule:sample   # offline dry run on data/sample/schedule.json.gz
  *
  * Output: data/headcodeSchedule.generated.json
- *   { "2T10": [{ toc: "GW", dest: "Paignton", dep: "0912" }], ... }
+ *   { "2T10": [{ toc: "GW", dest: "Paignton", dep: "0912", uid: "C12345" }], ... }
  * A headcode can have several workings in a day; the live server picks the one
- * whose timing is active now.
+ * whose timing is active now. `uid` is the CIF train UID — Darwin push-port
+ * messages carry the same UID, so it correlates Darwin RIDs to headcodes.
  */
 import {
   createWriteStream,
@@ -168,9 +169,10 @@ for await (const line of rl) {
   const dest = tiplocToName.get(destTiploc) || destTiploc;
   const origin = locs[0] || {};
   const dep = (origin.public_departure || origin.departure || "").trim();
+  const uid = (s.CIF_train_uid || "").trim().toUpperCase();
 
   const list = byHeadcode.get(headcode) || [];
-  list.push({ toc, dest, dep });
+  list.push({ toc, dest, dep, uid });
   byHeadcode.set(headcode, list);
   kept++;
 }
@@ -182,11 +184,15 @@ mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(out) + "\n");
 
 const tocCount = {};
+let withUid = 0;
 for (const list of byHeadcode.values()) {
-  for (const e of list) tocCount[e.toc || "?"] = (tocCount[e.toc || "?"] || 0) + 1;
+  for (const e of list) {
+    tocCount[e.toc || "?"] = (tocCount[e.toc || "?"] || 0) + 1;
+    if (e.uid) withUid++;
+  }
 }
 console.log(
-  `[schedule] ${scanned} schedules scanned · ${kept} on-patch workings today · ${byHeadcode.size} distinct headcodes → ${OUT}`,
+  `[schedule] ${scanned} schedules scanned · ${kept} on-patch workings today (${withUid} with UID) · ${byHeadcode.size} distinct headcodes → ${OUT}`,
 );
 console.log(
   "[schedule] operators:",

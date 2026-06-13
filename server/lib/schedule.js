@@ -25,11 +25,13 @@ function hhmmToMin(s) {
 export function loadSchedule() {
   let table = {};
   let mtime = 0;
+  let uidMap = new Map(); // CIF UID → headcode (for Darwin rid→uid correlation)
 
   const refresh = () => {
     if (!existsSync(PATH)) {
       if (mtime !== 0) console.warn("[schedule] table file gone — enrichment off");
       table = {};
+      uidMap = new Map();
       mtime = 0;
       return;
     }
@@ -38,7 +40,16 @@ export function loadSchedule() {
     try {
       table = JSON.parse(readFileSync(PATH, "utf8"));
       mtime = m;
-      console.log(`[schedule] loaded ${Object.keys(table).length} headcodes for enrichment`);
+      uidMap = new Map();
+      for (const [hc, list] of Object.entries(table)) {
+        for (const e of list) {
+          if (e.uid) uidMap.set(String(e.uid).trim().toUpperCase(), hc);
+        }
+      }
+      console.log(
+        `[schedule] loaded ${Object.keys(table).length} headcodes for enrichment` +
+          (uidMap.size ? ` (${uidMap.size} with CIF UIDs)` : " (no UIDs — re-run `npm run schedule` for Darwin correlation)"),
+      );
     } catch (e) {
       console.error("[schedule] failed to load table:", e.message);
     }
@@ -67,5 +78,14 @@ export function loadSchedule() {
     return { toc: best.toc, dest: best.dest };
   };
 
-  return { lookup };
+  /** Is this headcode in today's on-patch schedule at all? */
+  const has = (headcode) => Boolean(table[headcode]?.length);
+
+  /** Headcode for a CIF UID (Darwin's uid attribute), or null. */
+  const headcodeForUid = (uid) => uidMap.get(String(uid || "").trim().toUpperCase()) ?? null;
+
+  /** The working TOC for a headcode (consistent across a day's workings). */
+  const tocFor = (headcode) => table[headcode]?.[0]?.toc ?? null;
+
+  return { lookup, has, headcodeForUid, tocFor };
 }

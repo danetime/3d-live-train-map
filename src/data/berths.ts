@@ -22,8 +22,10 @@ import type { LatLng } from "./types";
 
 /** `dir` is the known travel direction at this berth, where the source data
  *  records it (SMART splits berth steps into down/up): 1 = increasing t,
- *  -1 = decreasing. Optional — berths without it keep inferred direction. */
-export type BerthPos = { lineId: string; t: number; dir?: 1 | -1 };
+ *  -1 = decreasing. Optional — berths without it keep inferred direction.
+ *  `crs`/`platform`: station + platform the berth stands at, where known —
+ *  lets the renderer park the train on the modelled platform lane. */
+export type BerthPos = { lineId: string; t: number; dir?: 1 | -1; crs?: string; platform?: string };
 
 const berths = new Map<string, BerthPos>();
 const key = (area: string, berth: string) => `${area}:${berth}`;
@@ -36,6 +38,15 @@ const DEMO_PREFIX: Record<string, string> = {
   taunton: "TAU",
 };
 const DEMO_K = 10;
+// Replay-mode demo: each line's first berth is at Exeter St David's, so give it
+// a platform — demo trains then park on the modelled platform lanes exactly
+// like live ones, with no credentials needed.
+const DEMO_EXD_PLATFORM: Record<string, string> = {
+  "newton-abbot": "4",
+  taunton: "5",
+  exmouth: "1",
+  paignton: "6",
+};
 for (const line of LINES) {
   const prefix = DEMO_PREFIX[line.id];
   if (!prefix) continue;
@@ -50,7 +61,12 @@ for (const line of LINES) {
     const t = miles
       ? mileageToT(line.id, miles[0] + (miles[miles.length - 1] - miles[0]) * f)
       : f;
-    berths.set(key("DEMO", id), { lineId: line.id, t });
+    const atExd = i === 0 && line.stops[0] === "EXD";
+    berths.set(key("DEMO", id), {
+      lineId: line.id,
+      t,
+      ...(atExd ? { crs: "EXD", platform: DEMO_EXD_PLATFORM[line.id] } : {}),
+    });
   }
 }
 

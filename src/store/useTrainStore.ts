@@ -31,6 +31,9 @@ type TrainStore = {
   /** Currently selected lineside signal (clicking a signal post/lamp). */
   selectedSignal: SelectedSignal | null;
   selectSignal: (sig: SelectedSignal | null) => void;
+  /** Selected station (CRS) — opens the platform panel + bird's-eye framing. */
+  selectedStation: string | null;
+  selectStation: (crs: string | null) => void;
   /** Live aspect of the selected signal, kept fresh by the Signals layer. */
   signalAspect: "red" | "green" | null;
   setSignalAspect: (aspect: "red" | "green" | null) => void;
@@ -64,10 +67,17 @@ export const useTrainStore = create<TrainStore>((set) => ({
         }),
       };
     }),
-  select: (id) => set({ selectedId: id, ...(id ? { selectedSignal: null } : {}) }),
+  select: (id) => set({ selectedId: id, ...(id ? { selectedSignal: null, selectedStation: null } : {}) }),
   selectedSignal: null,
   selectSignal: (sig) =>
-    set({ selectedSignal: sig, signalAspect: null, ...(sig ? { selectedId: null } : {}) }),
+    set({
+      selectedSignal: sig,
+      signalAspect: null,
+      ...(sig ? { selectedId: null, selectedStation: null } : {}),
+    }),
+  selectedStation: null,
+  selectStation: (crs) =>
+    set({ selectedStation: crs, ...(crs ? { selectedId: null, selectedSignal: null } : {}) }),
   signalAspect: null,
   setSignalAspect: (signalAspect) => set({ signalAspect }),
   detailLevel: 0,

@@ -6,21 +6,29 @@
  * the North Bay and Hyde Park Siding at the north end. Compact and aligned to
  * the through-axis (the smooth Taunton↔Plymouth direction at St David's), so it
  * reads as a tidy station rather than bars crossing the lines at an angle.
+ *
+ * The frame (origin + rotation) and the per-platform track lanes live in
+ * data/stationLayouts.ts — shared with the Train renderer, so trains park
+ * exactly beside the face whose number they carry. Each number is drawn at the
+ * island edge of the face it labels. Clicking the station opens the platform
+ * panel and the bird's-eye camera.
  */
-import { useMemo } from "react";
-import * as THREE from "three";
 import { Text } from "@react-three/drei";
-import { lineCurve } from "../data/lineCurves";
-import { project } from "../data/geo";
-import { ORIGIN } from "../data/network";
+import { stationLayout } from "../data/stationLayouts";
+import { useTrainStore } from "../store/useTrainStore";
 
 const PLAT_LEN = 3.4;
 const ISLAND_W = 0.55;
 const ISLANDS = [-1.35, 0, 1.35]; // local X of the three islands
-const FACES: [string, string][] = [
-  ["1", "2"],
-  ["3", "4"],
-  ["5", "6"],
+/** Each platform face: its number, the island it's on, and which side (−1 =
+ *  east/P1 side, +1 = west) — matching the lanes in stationLayouts.ts. */
+const FACES: { n: string; island: number; side: -1 | 1 }[] = [
+  { n: "1", island: -1.35, side: -1 },
+  { n: "2", island: -1.35, side: 1 },
+  { n: "3", island: 0, side: -1 },
+  { n: "4", island: 0, side: 1 },
+  { n: "5", island: 1.35, side: -1 },
+  { n: "6", island: 1.35, side: 1 },
 ];
 
 function PlatNum({ n, x, z }: { n: string; x: number; z: number }) {
@@ -41,34 +49,43 @@ function PlatNum({ n, x, z }: { n: string; x: number; z: number }) {
 }
 
 export function StationDetail() {
-  const { pos, rotY } = useMemo(() => {
-    const p = project(ORIGIN); // Exeter St David's
-    // Smooth through-axis: blend the Plymouth-ward and (reversed) Taunton-ward
-    // tangents so the platforms line up with the main line both sides.
-    const tPly = lineCurve("newton-abbot").getTangentAt(0.004, new THREE.Vector3());
-    const tTau = lineCurve("taunton").getTangentAt(0.004, new THREE.Vector3());
-    const axis = tPly.sub(tTau).normalize();
-    return { pos: p, rotY: Math.atan2(axis.x, axis.z) };
-  }, []);
+  const selectStation = useTrainStore((s) => s.selectStation);
+  const lay = stationLayout("EXD")!;
+  const { pos, rotY } = lay;
 
   return (
-    <group position={[pos.x, 0.04, pos.z]} rotation={[0, rotY, 0]}>
+    <group
+      position={[pos.x, 0.04, pos.z]}
+      rotation={[0, rotY, 0]}
+      onClick={(e) => {
+        e.stopPropagation();
+        selectStation("EXD");
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = "auto";
+      }}
+    >
       {/* Crisp station base, snug around the platforms */}
       <mesh position={[0, 0.18, 0]} receiveShadow>
         <boxGeometry args={[3.7, 0.12, PLAT_LEN + 1.1]} />
         <meshStandardMaterial color="#2f3742" flatShading />
       </mesh>
 
-      {/* Three island platforms, six numbered faces */}
-      {ISLANDS.map((x, i) => (
-        <group key={x}>
-          <mesh position={[x, 0.32, 0]} castShadow receiveShadow>
-            <boxGeometry args={[ISLAND_W, 0.26, PLAT_LEN]} />
-            <meshStandardMaterial color="#f6ad55" flatShading />
-          </mesh>
-          <PlatNum n={FACES[i][0]} x={x} z={-PLAT_LEN / 2 + 0.5} />
-          <PlatNum n={FACES[i][1]} x={x} z={PLAT_LEN / 2 - 0.5} />
-        </group>
+      {/* Three island platforms */}
+      {ISLANDS.map((x) => (
+        <mesh key={x} position={[x, 0.32, 0]} castShadow receiveShadow>
+          <boxGeometry args={[ISLAND_W, 0.26, PLAT_LEN]} />
+          <meshStandardMaterial color="#f6ad55" flatShading />
+        </mesh>
+      ))}
+      {/* Numbers sit on the island edge beside the track they serve, staggered
+          along the platform so neighbouring numbers don't collide. */}
+      {FACES.map((f) => (
+        <PlatNum key={f.n} n={f.n} x={f.island + f.side * 0.16} z={f.side * 0.9} />
       ))}
 
       {/* North Bay terminal + Hyde Park Siding stub at the north (−Z) end */}

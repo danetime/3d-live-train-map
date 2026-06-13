@@ -1,8 +1,19 @@
-/** Draws each line as low-poly track: single rail, or parallel up/down rails. */
+/**
+ * Draws the network as low-poly track, following the TRACK GRAPH's edges.
+ *
+ * Each line's drawn edges are grouped into continuous runs (`railRuns`) and each
+ * run becomes one ribbon — a single rail, parallel up/down rails for double
+ * track, or a branch peeling off the shared trunk. Driving the geometry from the
+ * graph (rather than per-line `drawFrom`/`doubleTrack`) is what lets later steps
+ * split a line into double track or diverge a junction without touching this
+ * renderer. For today's topology each line is one run, so the output is
+ * identical to the previous per-line renderer.
+ */
 import { useMemo } from "react";
 import * as THREE from "three";
 import { LINES } from "../data/network";
-import { lineCurve, lineStopParams, branchOffset } from "../data/lineCurves";
+import { lineCurve, branchOffset } from "../data/lineCurves";
+import { railRuns } from "../data/trackGraph";
 import { useTrainStore } from "../store/useTrainStore";
 import type { Line } from "../data/types";
 
@@ -13,15 +24,21 @@ const TRACK_HEIGHT = 0.26;
 const BASE_Y = 0.16;
 const Y_STEP = 0.05; // tiny per-line lift to avoid z-fighting where lines cross
 
-/** Build a track ribbon following a line, with a per-point lateral offset. */
-function buildTube(lineId: string, tStart: number, offsetFn: (t: number) => number, width: number) {
+/** Build a track ribbon along a line over [tStart,tEnd], with a lateral offset. */
+function buildTube(
+  lineId: string,
+  tStart: number,
+  tEnd: number,
+  offsetFn: (t: number) => number,
+  width: number,
+) {
   const curve = lineCurve(lineId);
   const N = 360;
   const p = new THREE.Vector3();
   const tan = new THREE.Vector3();
   const pts: THREE.Vector3[] = [];
   for (let i = 0; i <= N; i++) {
-    const t = tStart + (1 - tStart) * (i / N);
+    const t = tStart + (tEnd - tStart) * (i / N);
     curve.getPointAt(t, p);
     const q = p.clone();
     const offset = offsetFn(t);
@@ -39,17 +56,18 @@ function buildTube(lineId: string, tStart: number, offsetFn: (t: number) => numb
 }
 
 function Track({ line, index, signal }: { line: Line; index: number; signal: boolean }) {
-  const tStart = line.drawFrom ? lineStopParams(line.id)[line.stops.indexOf(line.drawFrom)] : 0;
-
   const geometries = useMemo(() => {
-    if (line.doubleTrack) {
-      return [
-        buildTube(line.id, tStart, () => GAUGE, RAIL_WIDTH),
-        buildTube(line.id, tStart, () => -GAUGE, RAIL_WIDTH),
-      ];
+    const geos: THREE.BufferGeometry[] = [];
+    for (const run of railRuns(line.id)) {
+      if (run.doubleTrack) {
+        geos.push(buildTube(line.id, run.tStart, run.tEnd, () => GAUGE, RAIL_WIDTH));
+        geos.push(buildTube(line.id, run.tStart, run.tEnd, () => -GAUGE, RAIL_WIDTH));
+      } else {
+        geos.push(buildTube(line.id, run.tStart, run.tEnd, (t) => branchOffset(line, t), SINGLE_WIDTH));
+      }
     }
-    return [buildTube(line.id, tStart, (t) => branchOffset(line, t), SINGLE_WIDTH)];
-  }, [line, tStart]);
+    return geos;
+  }, [line]);
 
   return (
     <group position={[0, BASE_Y + index * Y_STEP, 0]}>

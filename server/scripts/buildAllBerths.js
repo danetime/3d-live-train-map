@@ -140,6 +140,7 @@ for (const r of smartRows) {
 
 const out = {};
 let mapped = 0;
+let withPlatform = 0;
 const byStation = {};
 const leftover = new Map(); // resolved CRS we don't (yet) map → berth count
 for (const [berth, info] of berthInfo) {
@@ -155,14 +156,26 @@ for (const [berth, info] of berthInfo) {
     const eventDown = v.down > v.up;
     dir = eventDown === FORWARD_IS_DOWN[st.line] ? 1 : -1;
   }
-  out[`${AREA}:${berth}`] = { line: st.line, miles: st.miles, chains: st.chains, ...(dir ? { dir } : {}) };
+  // crs + platform (SMART's PLATFORM column) let the renderer park trains on
+  // the station's modelled platform lanes instead of stacking them on one dot.
+  out[`${AREA}:${berth}`] = {
+    line: st.line,
+    miles: st.miles,
+    chains: st.chains,
+    ...(dir ? { dir } : {}),
+    crs,
+    ...(info.platform ? { platform: info.platform } : {}),
+  };
+  if (info.platform) withPlatform++;
   mapped++;
   byStation[crs] = (byStation[crs] || 0) + 1;
 }
 
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(out, null, 2) + "\n");
-console.log(`[berths] mapped ${mapped} berths across ${Object.keys(byStation).length} stations → ${OUT}`);
+console.log(
+  `[berths] mapped ${mapped} berths (${withPlatform} with platforms) across ${Object.keys(byStation).length} stations → ${OUT}`,
+);
 console.log("[berths] per station:", Object.entries(byStation).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c}:${n}`).join("  "));
 // Audit: EX-area berths that resolved to a real CRS we don't map. These are the
 // candidates worth adding to STATION (Marsh Barton, etc.) — sorted by berth count.

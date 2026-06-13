@@ -15,14 +15,19 @@ import { StationDetail } from "./StationDetail";
 import { Trains } from "./Trains";
 import { useTrainStore } from "../store/useTrainStore";
 import { trainPositions } from "../sim/trainPositions";
+import { stationLayout } from "../data/stationLayouts";
 
 /**
  * Camera behaviour:
  * - Nothing selected → hands off: orbit, zoom and PAN freely anywhere.
  * - Train selected → ease into an oblique framing once, then FOLLOW the train
  *   while leaving orbit/zoom fully under your control (no forced top-down).
+ * - Station selected → glide once to a bird's-eye view straight over the
+ *   platforms, then release control (orbit/zoom stay yours).
  */
 const FOLLOW_OFFSET = new THREE.Vector3(0, 30, 42); // initial 3/4 view on select
+const BIRDSEYE_HEIGHT = 36; // station view height — lands inside detail level 3
+const BIRDSEYE_BACK = 6; // slight tilt off pure nadir, keeps platform numbers upright
 
 /** Map camera distance-to-target onto a detail level (0 far … 3 close). */
 function levelFor(d: number): number {
@@ -34,10 +39,12 @@ function levelFor(d: number): number {
 
 function CameraRig({ controls }: { controls: React.RefObject<OrbitControlsImpl> }) {
   const selectedId = useTrainStore((s) => s.selectedId);
+  const selectedStation = useTrainStore((s) => s.selectedStation);
   const setDetailLevel = useTrainStore((s) => s.setDetailLevel);
   const goal = useRef(new THREE.Vector3());
   const follow = useRef(new THREE.Vector3()); // smoothed point we're tracking
   const framingId = useRef<string | null>(null);
+  const stationFramingId = useRef<string | null>(null);
   const framing = useRef(false);
 
   useFrame(({ camera }) => {
@@ -45,6 +52,7 @@ function CameraRig({ controls }: { controls: React.RefObject<OrbitControlsImpl> 
     if (!ctrl) return;
     const target = selectedId ? trainPositions.get(selectedId) : null;
     if (target) {
+      stationFramingId.current = null;
       // New selection: start tracking from the current orbit centre and ease
       // into a pleasant oblique framing once, then release control.
       if (framingId.current !== selectedId) {
@@ -71,6 +79,27 @@ function CameraRig({ controls }: { controls: React.RefObject<OrbitControlsImpl> 
       }
     } else {
       framingId.current = null;
+      // Station selected: one-shot glide to overhead, slightly north of nadir
+      // so the flat platform numbers read upright; then hands off.
+      const lay = selectedStation ? stationLayout(selectedStation) : null;
+      if (lay) {
+        if (stationFramingId.current !== selectedStation) {
+          stationFramingId.current = selectedStation;
+          framing.current = true;
+        }
+        if (framing.current) {
+          ctrl.target.lerp(lay.pos, 0.1);
+          goal.current.set(
+            lay.pos.x - Math.sin(lay.rotY) * BIRDSEYE_BACK,
+            lay.pos.y + BIRDSEYE_HEIGHT,
+            lay.pos.z - Math.cos(lay.rotY) * BIRDSEYE_BACK,
+          );
+          camera.position.lerp(goal.current, 0.08);
+          if (camera.position.distanceTo(goal.current) < 1.5) framing.current = false;
+        }
+      } else {
+        stationFramingId.current = null;
+      }
     }
     setDetailLevel(levelFor(camera.position.distanceTo(ctrl.target)));
     ctrl.update();
@@ -82,6 +111,8 @@ export function World() {
   const controls = useRef<OrbitControlsImpl>(null);
   const clearSelection = useTrainStore((s) => s.select);
   const clearSignal = useTrainStore((s) => s.selectSignal);
+  const clearStation = useTrainStore((s) => s.selectStation);
+  const selectedStation = useTrainStore((s) => s.selectedStation);
   const detailLevel = useTrainStore((s) => s.detailLevel);
   const land = useTrainStore((s) => s.theme) === "land";
 
@@ -94,6 +125,7 @@ export function World() {
       onPointerMissed={() => {
         clearSelection(null);
         clearSignal(null);
+        clearStation(null);
       }}
     >
       <color attach="background" args={[bg]} />
@@ -138,7 +170,9 @@ export function World() {
       <RailNetwork />
       {detailLevel >= 2 && <Signals />}
       <Stations />
-      {detailLevel >= 3 && <StationDetail />}
+      {/* Platform layout appears up close — or immediately when the station is
+          selected, so it's there as the bird's-eye glide arrives. */}
+      {(detailLevel >= 3 || selectedStation === "EXD") && <StationDetail />}
       <Trains />
 
       <OrbitControls
