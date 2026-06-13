@@ -33,6 +33,56 @@
 }
 .schematic-map svg {
   display: block;
+  touch-action: none; /* let us own pan/zoom gestures */
+}
+.schematic-map svg.grab {
+  cursor: grab;
+}
+.schematic-map svg.grabbing {
+  cursor: grabbing;
+}
+
+/* Pan/zoom controls */
+.schematic-controls {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.schematic-controls button {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(11, 18, 32, 0.82);
+  color: #e8eef7;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.schematic-controls button:hover {
+  background: rgba(20, 32, 56, 0.95);
+}
+
+/* In the schematic view, move the HUD panels out of the diagram (to the bottom)
+   and the view-switch to a corner, so nothing covers the line. */
+.view-schematic .hud-top-left {
+  top: auto;
+  bottom: max(12px, env(safe-area-inset-bottom));
+}
+.view-schematic .hud-top-right {
+  top: auto;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  max-height: 42vh;
+}
+.view-schematic .view-switch {
+  left: 14px;
+  transform: none;
 }
 .sm-label {
   fill: #b6c2d6;

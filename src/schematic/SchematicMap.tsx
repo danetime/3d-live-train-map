@@ -4,13 +4,15 @@
  * Reuses the exact same live data as the 3D world (the Zustand store's trains,
  * fed from the /server WebSocket) — only the drawing is different. Lines are
  * straight, stations are ticks, trains are dots that glide along by their line
- * param `t`. Because the 3D `Train` components aren't mounted in this mode,
- * this view runs its own small animation loop that advances each train the same
- * way `Train.tsx` does (self-propelled mock trains bounce at the termini; live
- * trains ease toward the feed's `t`), updating the SVG imperatively so React
- * isn't re-rendering every frame.
+ * param `t`. Its own rAF loop advances each train like `Train.tsx` (mock trains
+ * self-propel + bounce; live trains ease toward the feed `t`) and moves the SVG
+ * groups imperatively (no per-frame React render).
+ *
+ * Pan & zoom: the SVG `viewBox` is the camera — drag to pan, two-finger scroll
+ * to pan, pinch (ctrl+wheel) or the on-screen buttons to zoom. Trains live
+ * inside the same viewBox so they pan/zoom with the diagram.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LINES, LINE_BY_ID, STATIONS } from "../data/network";
 import { useTrainStore } from "../store/useTrainStore";
 import {
@@ -33,7 +35,11 @@ const py = (y: number) => PAD + (y - SCHEMATIC_BOUNDS.minY) * UY;
 const STATION_NAME = new Map(STATIONS.map((s) => [s.code, s.name]));
 const HUBS = new Set(["EXD", "NTA"]);
 
+const MIN_W = W * 0.18; // most zoomed-in
+const MAX_W = W * 1.5; // most zoomed-out
+
 type Param = { t: number; dir: 1 | -1 };
+type Box = { x: number; y: number; w: number; h: number };
 
 export function SchematicMap() {
   const trains = useTrainStore((s) => s.trains);
@@ -42,6 +48,66 @@ export function SchematicMap() {
 
   const groupRefs = useRef(new Map<string, SVGGElement>());
   const params = useRef(new Map<string, Param>());
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const [vb, setVb] = useState<Box>({ x: 0, y: 0, w: W, h: H });
+  const drag = useRef<{ x: number; y: number; vbx: number; vby: number; s: number } | null>(null);
+  const moved = useRef(false);
+
+  // px-per-user-unit for a box (uniform scale under preserveAspectRatio "meet").
+  const scaleFor = (b: Box) => {
+    const r = svgRef.current?.getBoundingClientRect();
+    if (!r || !r.width || !r.height) return b.w / W;
+    return Math.max(b.w / r.width, b.h / r.height);
+  };
+
+  const zoomAt = (factor: number, clientX: number, clientY: number) => {
+    setVb((b) => {
+      const r = svgRef.current?.getBoundingClientRect();
+      if (!r) return b;
+      const s = Math.max(b.w / r.width, b.h / r.height);
+      const offX = (r.width - b.w / s) / 2; // letterbox centring offsets
+      const offY = (r.height - b.h / s) / 2;
+      const fx = b.x + (clientX - r.left - offX) * s; // focal point (user units)
+      const fy = b.y + (clientY - r.top - offY) * s;
+      const nw = Math.min(MAX_W, Math.max(MIN_W, b.w * factor));
+      const ratio = nw / b.w;
+      const nh = b.h * ratio;
+      return { x: fx - (fx - b.x) * ratio, y: fy - (fy - b.y) * ratio, w: nw, h: nh };
+    });
+  };
+
+  const zoomCentre = (factor: number) => {
+    const r = svgRef.current?.getBoundingClientRect();
+    if (r) zoomAt(factor, r.left + r.width / 2, r.top + r.height / 2);
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    moved.current = false;
+    drag.current = { x: e.clientX, y: e.clientY, vbx: vb.x, vby: vb.y, s: scaleFor(vb) };
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) moved.current = true;
+    setVb((b) => ({ ...b, x: d.vbx - dx * d.s, y: d.vby - dy * d.s }));
+  };
+  const onPointerUp = () => {
+    drag.current = null;
+  };
+  const onWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey) {
+      zoomAt(e.deltaY > 0 ? 1.1 : 1 / 1.1, e.clientX, e.clientY); // pinch
+    } else {
+      setVb((b) => {
+        const s = scaleFor(b);
+        return { ...b, x: b.x + e.deltaX * s, y: b.y + e.deltaY * s }; // two-finger pan
+      });
+    }
+  };
 
   // Animation loop: advance each train's local param and move its SVG group.
   useEffect(() => {
@@ -82,14 +148,28 @@ export function SchematicMap() {
 
   return (
     <div className="schematic-map">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" width="100%" height="100%">
+      <svg
+        ref={svgRef}
+        viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
+        preserveAspectRatio="xMidYMid meet"
+        width="100%"
+        height="100%"
+        className={drag.current ? "grabbing" : "grab"}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+        onWheel={onWheel}
+      >
         <rect
-          x={0}
-          y={0}
-          width={W}
-          height={H}
+          x={vb.x}
+          y={vb.y}
+          width={vb.w}
+          height={vb.h}
           fill="transparent"
-          onClick={() => select(null)}
+          onClick={() => {
+            if (!moved.current) select(null);
+          }}
         />
 
         {/* Route lines */}
@@ -169,6 +249,7 @@ export function SchematicMap() {
               className="sm-train"
               onClick={(e) => {
                 e.stopPropagation();
+                if (moved.current) return; // it was a pan, not a tap
                 select(t.id === selectedId ? null : t.id);
               }}
             >
@@ -181,6 +262,13 @@ export function SchematicMap() {
           );
         })}
       </svg>
+
+      {/* Movement controls */}
+      <div className="schematic-controls">
+        <button onClick={() => zoomCentre(1 / 1.3)} title="Zoom in">+</button>
+        <button onClick={() => zoomCentre(1.3)} title="Zoom out">−</button>
+        <button onClick={() => setVb({ x: 0, y: 0, w: W, h: H })} title="Fit to screen">⤢</button>
+      </div>
     </div>
   );
 }

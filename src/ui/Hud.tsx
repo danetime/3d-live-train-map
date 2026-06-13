@@ -14,6 +14,7 @@ export function Hud() {
   const feedCount = useTrainStore((s) => s.feedCount);
   const theme = useTrainStore((s) => s.theme);
   const toggleTheme = useTrainStore((s) => s.toggleTheme);
+  const viewMode = useTrainStore((s) => s.viewMode);
 
   const selectedSignal = useTrainStore((s) => s.selectedSignal);
   const selectSignal = useTrainStore((s) => s.selectSignal);
@@ -213,7 +214,9 @@ export function Hud() {
       )}
 
       <div className="hint">
-        Drag to pan · right-drag / two-finger to rotate · scroll to zoom · tap a train or signal
+        {viewMode === "schematic"
+          ? "Drag to pan · two-finger scroll to move · pinch / buttons to zoom · tap a train"
+          : "Drag to pan · right-drag / two-finger to rotate · scroll to zoom · tap a train or signal"}
       </div>
     </>
   );

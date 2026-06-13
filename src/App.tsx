@@ -14,7 +14,7 @@ export default function App() {
   const toggleViewMode = useTrainStore((s) => s.toggleViewMode);
 
   return (
-    <div className="app">
+    <div className={viewMode === "schematic" ? "app view-schematic" : "app"}>
       {viewMode === "schematic" ? <SchematicMap /> : <World />}
       <Hud />
       <button className="view-switch" onClick={toggleViewMode} title="Switch view">
