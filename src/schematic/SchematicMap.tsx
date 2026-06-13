@@ -15,6 +15,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LINES, LINE_BY_ID, STATIONS } from "../data/network";
 import { useTrainStore } from "../store/useTrainStore";
+import { lineTToEdge } from "../data/trackGraph";
 import { SCHEMATIC_POS, SCHEMATIC_BOUNDS, lineSegments, schematicPos } from "./layout";
 import { schematicSignals } from "./signals";
 
@@ -187,7 +188,19 @@ export function SchematicMap() {
         const g = groupRefs.current.get(tr.id);
         if (g) {
           const pt = schematicPos(tr.lineId, p.t);
-          g.setAttribute("transform", `translate(${px(pt.x)},${py(pt.y)})`);
+          let tx = px(pt.x);
+          let ty = py(pt.y);
+          // On double track, sit the train on its own rail (up vs down) rather
+          // than the centreline — offset perpendicular to travel by direction.
+          if (lineTToEdge(tr.lineId, p.t)?.edge.doubleTrack) {
+            const ahead = schematicPos(tr.lineId, p.t + 0.004);
+            const dx = px(ahead.x) - tx;
+            const dy = py(ahead.y) - ty;
+            const len = Math.hypot(dx, dy) || 1;
+            tx += (-dy / len) * p.dir * RAIL_GAP;
+            ty += (dx / len) * p.dir * RAIL_GAP;
+          }
+          g.setAttribute("transform", `translate(${tx},${ty})`);
         }
       }
       for (const id of params.current.keys()) if (!seen.has(id)) params.current.delete(id);
