@@ -1,7 +1,7 @@
 /**
  * Procedural isometric railway tileset generator (no network, no credits).
  *
- *   node scripts/railTiles.mjs            # write the tileset + preview sheets
+ *   node scripts/railTiles.mjs            # write the tileset
  *   node scripts/railTiles.mjs --preview  # also write demo PNGs to /tmp
  *
  * Why procedural and not PixelLab? A track set has to *connect*: the rails of
@@ -10,21 +10,22 @@
  * three, so the network never lines up. Here we push pixels directly, so every
  * piece keys into every other piece by construction.
  *
- * The grid is the spike's classic 2:1 iso diamond (TW=64, TH=32). A tile's
- * track centre-line always enters/leaves at one of the four EDGE MIDPOINTS:
+ * The grid is the spike's 2:1 iso diamond, rendered at 2× (128×64) for detail.
+ * A tile's track centre-line always enters/leaves at one of four EDGE MIDPOINTS,
+ * and a quadratic Bézier between any two of them with its control point at the
+ * tile CENTRE is tangent to the iso axes at both ends — so a curve meets a
+ * straight in the next tile with no kink. That one rule builds straights,
+ * curves, crossings and switches alike.
  *
- *        TL ____ TR          centred coords (origin = tile centre):
- *         /\    /\             TL (-16,-8)   TR ( 16,-8)
- *        /  \  /  \            BL (-16, 8)   BR ( 16, 8)
- *       /    \/    \         A quadratic Bézier from one midpoint to another
- *       \    /\    /         with its control point at the tile CENTRE is
- *        \  /  \  /          tangent to the iso axes at both ends — so a curve
- *         \/____\/           meets a straight in the next tile with no kink.
- *        BL      BR          That single rule builds straights, curves,
- *                            crossings and switches alike.
+ * Detail, painted back-to-front per tile:
+ *   ballast bed   — multi-tone gravel, darkened shoulder, stray grass tufts
+ *   sleepers      — shaded wooden ties with grain and a cast shadow
+ *   chairs        — cast-iron plates where each rail crosses a sleeper
+ *   rails         — a 4px cross-section: glint / railhead / web / shadow
+ *   signals       — backboard, hooded lenses, foundation + a side ladder
  *
- * Tiles are transparent 64×32 PNGs (ballast + sleepers + two rails only), so
- * they drop on top of any ground tile and tile in every direction.
+ * Tiles are transparent PNGs, so they drop on any ground tile and tile in every
+ * direction. Signalled straights are 128×128 (track in the bottom half).
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -33,43 +34,56 @@ import pkg from "pngjs";
 const { PNG } = pkg;
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repo = join(here, "..");
-const TILE_DIR = join(repo, "src", "spike", "assets", "track");
+const TILE_DIR = join(here, "..", "src", "spike", "assets", "track");
 
-const TW = 64;
-const TH = 32;
-const CX = TW / 2; // tile-centre in image pixels
+const TW = 128; // iso tile width (2× the spike's logical 64)
+const TH = 64; // iso tile height — 2:1 classic iso
+const CX = TW / 2;
 const CY = TH / 2;
 
 // Edge midpoints in image coords (centred coord + centre offset).
 const E = {
-  TL: [CX - 16, CY - 8],
-  TR: [CX + 16, CY - 8],
-  BR: [CX + 16, CY + 8],
-  BL: [CX - 16, CY + 8],
+  TL: [CX - 32, CY - 16],
+  TR: [CX + 32, CY - 16],
+  BR: [CX + 32, CY + 16],
+  BL: [CX - 32, CY + 16],
 };
 const CENTRE = [CX, CY];
 
-// ---- palette (muted, to sit on the board's #e7e1d3 / grass #7fae54) --------
-const BALLAST = [0x8c, 0x83, 0x78];
-const BALLAST_DK = [0x70, 0x68, 0x5d];
-const BALLAST_LT = [0xa6, 0x9d, 0x90];
-const SLEEPER = [0x57, 0x47, 0x33];
-const SLEEPER_LT = [0x6d, 0x5a, 0x44];
-const RAIL_DK = [0x55, 0x5c, 0x64]; // rail web / shadow side
-const RAIL = [0x9a, 0xa3, 0xab]; // steel
-const RAIL_HI = [0xd9, 0xdf, 0xe4]; // sun glint on the railhead
+const GAUGE = 14; // screen px between the two rails
+const BAND = 17; // ballast half-width (iso-stretched on x)
 
-const GAUGE = 7; // screen px between the two rails
-const BAND = 8.5; // ballast half-width (iso-stretched on x)
+// ---- palette (muted, to sit on the board's #e7e1d3 / grass #7fae54) --------
+const BALLAST = [0x8a, 0x82, 0x78];
+const BALLAST_DK = [0x65, 0x5d, 0x52];
+const BALLAST_LT = [0xa6, 0x9c, 0x8e];
+const BALLAST_XL = [0xbe, 0xb5, 0xa6];
+const SHOULDER = [0x57, 0x50, 0x46]; // darker bed edge
+const TUFT = [0x6f, 0x9c, 0x49];
+const TUFT_DK = [0x5a, 0x86, 0x3b];
+
+const SLEEPER = [0x59, 0x47, 0x35];
+const SLEEPER_TOP = [0x6f, 0x5b, 0x45];
+const SLEEPER_BOT = [0x3c, 0x30, 0x20];
+const SLEEPER_GRAIN = [0x4d, 0x3e, 0x2c];
+const CHAIR = [0x33, 0x36, 0x3b]; // cast-iron rail chair
+
+const RAIL_HI = [0xcc, 0xd2, 0xd7]; // sun glint on the railhead
+const RAIL = [0x9a, 0xa1, 0xa8]; // steel head
+const RAIL_WEB = [0x6b, 0x72, 0x7a]; // web below the head
+const RAIL_SH = [0x47, 0x4d, 0x54]; // shadow cast onto the ballast
 
 // signal head — lamps stacked top→bottom: GREEN, YELLOW, RED (a 3-aspect head)
 const SIG_POST = [0x3a, 0x3f, 0x47];
-const SIG_POST_HI = [0x53, 0x59, 0x61];
-const SIG_HEAD = [0x1f, 0x22, 0x26];
-const SIG_HEAD_HI = [0x2d, 0x31, 0x37];
-const LAMP_LIT = { green: [0x46, 0xd6, 0x5a], yellow: [0xf5, 0xc5, 0x18], red: [0xe2, 0x3b, 0x2e] };
-const LAMP_DIM = { green: [0x17, 0x33, 0x1c], yellow: [0x44, 0x39, 0x11], red: [0x3b, 0x15, 0x12] };
+const SIG_POST_HI = [0x56, 0x5c, 0x64];
+const SIG_POST_DK = [0x26, 0x2a, 0x30];
+const SIG_HEAD = [0x1c, 0x1f, 0x23];
+const SIG_BACK = [0x0e, 0x10, 0x13]; // backboard
+const SIG_BORDER = [0x3a, 0x3f, 0x47];
+const CONCRETE = [0x9a, 0x95, 0x8c];
+const CONCRETE_HI = [0xb4, 0xaf, 0xa5];
+const LAMP_LIT = { green: [0x53, 0xe0, 0x66], yellow: [0xf7, 0xc9, 0x22], red: [0xe8, 0x3f, 0x32] };
+const LAMP_DIM = { green: [0x16, 0x33, 0x1c], yellow: [0x45, 0x39, 0x11], red: [0x3b, 0x15, 0x12] };
 
 // ---------------------------------------------------------------------------
 // Tiny RGBA framebuffer with source-over compositing.
@@ -108,21 +122,44 @@ class Buf {
   }
 }
 
-// stable per-pixel jitter so ballast speckle doesn't shimmer between runs
+// stable per-pixel jitter so texture doesn't shimmer between runs
 const hash = (x, y) => {
   const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
   return s - Math.floor(s);
 };
 
+// straight-line plot (Bresenham) for continuous rails
+function line(buf, x0, y0, x1, y1, color, a = 255) {
+  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  let err = dx + dy;
+  for (;;) {
+    buf.px(x0, y0, color, a);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+}
+
+function disc(buf, cx, cy, r, color, a = 255) {
+  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
+    for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+      const dx = x - cx, dy = y - cy;
+      if (dx * dx + dy * dy <= r * r) buf.px(x, y, color, a);
+    }
+}
+
 // quadratic Bézier sampler (control point = tile centre)
-function sample(a, b, n = 48) {
+function sample(a, b, n = 110) {
   const pts = [];
   for (let i = 0; i <= n; i++) {
-    const t = i / n,
-      u = 1 - t;
-    const x = u * u * a[0] + 2 * u * t * CENTRE[0] + t * t * b[0];
-    const y = u * u * a[1] + 2 * u * t * CENTRE[1] + t * t * b[1];
-    pts.push([x, y]);
+    const t = i / n, u = 1 - t;
+    pts.push([
+      u * u * a[0] + 2 * u * t * CENTRE[0] + t * t * b[0],
+      u * u * a[1] + 2 * u * t * CENTRE[1] + t * t * b[1],
+    ]);
   }
   return pts;
 }
@@ -134,127 +171,158 @@ function distToPath(px, py, pts) {
   for (let i = 0; i < pts.length - 1; i++) {
     const [x1, y1] = pts[i];
     const [x2, y2] = pts[i + 1];
-    const dx = x2 - x1,
-      dy = y2 - y1;
+    const dx = x2 - x1, dy = y2 - y1;
     const L2 = dx * dx + dy * dy || 1;
     let t = ((px - x1) * dx + (py - y1) * dy) / L2;
     t = Math.max(0, Math.min(1, t));
-    const cx = x1 + t * dx,
-      cy = y1 + t * dy;
-    const ex = px - cx,
-      ey = (py - cy) * ISO_Y;
+    const ex = px - (x1 + t * dx), ey = (py - (y1 + t * dy)) * ISO_Y;
     const d = Math.sqrt(ex * ex + ey * ey);
     if (d < best) best = d;
   }
   return best;
 }
 
-function drawTie(buf, [x, y], [tx, ty]) {
-  // unit normal in screen space
-  let nx = -ty,
-    ny = tx;
-  const L = Math.hypot(nx, ny) || 1;
-  nx /= L;
-  ny /= L;
-  const half = GAUGE / 2 + 2.5;
-  for (let s = -half; s <= half; s += 0.5) {
-    const col = Math.abs(s) > half - 1 ? SLEEPER_LT : SLEEPER;
-    buf.px(x + nx * s, y + ny * s, col, 255);
-    buf.px(x + nx * s, y + ny * s + 1, SLEEPER, 235); // a touch of height
+const unit = (tx, ty) => {
+  const L = Math.hypot(tx, ty) || 1;
+  return [tx / L, ty / L];
+};
+
+// A shaded wooden sleeper centred at p, laid across the track (along the normal),
+// with a cast-iron chair where each rail will cross it.
+function drawSleeper(buf, [x, y], [tx, ty]) {
+  const [ux, uy] = unit(tx, ty);
+  const nx = -uy, ny = ux; // across the track
+  const halfLen = GAUGE / 2 + 5;
+  const halfW = 2;
+  for (let s = -halfLen; s <= halfLen; s += 0.5)
+    for (let w = -halfW; w <= halfW; w += 0.5) {
+      const px = x + nx * s + ux * w;
+      const py = y + ny * s + uy * w;
+      let col = SLEEPER;
+      if (py < y - 0.5) col = SLEEPER_TOP; // sunlit upper face
+      else if (py > y + 0.5) col = SLEEPER_BOT; // shaded lower face
+      else if (hash(px | 0, py | 0) > 0.7) col = SLEEPER_GRAIN;
+      buf.px(px, py, col, 255);
+    }
+  // a cast shadow just downhill of the tie
+  for (let s = -halfLen; s <= halfLen; s += 0.5)
+    buf.px(x + nx * s + ux * (halfW + 1), y + ny * s + uy * (halfW + 1) + 1, SLEEPER_BOT, 130);
+  // chairs at the two rail crossings
+  for (const side of [-1, 1]) {
+    const cxp = x + nx * (GAUGE / 2) * side;
+    const cyp = y + ny * (GAUGE / 2) * side;
+    for (let a = -1; a <= 1; a++)
+      for (let b = -1; b <= 1; b++) buf.px(cxp + a, cyp + b, CHAIR, 255);
   }
 }
 
+// One steel rail offset to `side` of the path, drawn as a 4px cross-section.
 function drawRail(buf, pts, side) {
-  for (let i = 0; i < pts.length; i++) {
-    const a = pts[Math.max(0, i - 1)];
-    const b = pts[Math.min(pts.length - 1, i + 1)];
-    let tx = b[0] - a[0],
-      ty = b[1] - a[1];
-    const L = Math.hypot(tx, ty) || 1;
-    tx /= L;
-    ty /= L;
-    const nx = -ty,
-      ny = tx;
-    const rx = pts[i][0] + nx * side * (GAUGE / 2);
-    const ry = pts[i][1] + ny * side * (GAUGE / 2);
-    buf.px(rx, ry + 1, RAIL_DK, 255); // web/shadow under the head
-    buf.px(rx, ry, RAIL, 255); // railhead
-    buf.px(rx, ry, RAIL_HI, 90); // glint
-  }
+  const off = pts.map((p, i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    const [ux, uy] = unit(b[0] - a[0], b[1] - a[1]);
+    return [p[0] - uy * side * (GAUGE / 2), p[1] + ux * side * (GAUGE / 2)];
+  });
+  const layers = [
+    [2, RAIL_SH, 200], // shadow onto ballast
+    [1, RAIL_WEB, 255], // web
+    [0, RAIL, 255], // railhead
+    [-1, RAIL_HI, 255], // glint
+  ];
+  for (const [dy, col, a] of layers)
+    for (let i = 0; i < off.length - 1; i++)
+      line(buf, off[i][0], off[i][1] + dy, off[i + 1][0], off[i + 1][1] + dy, col, a);
 }
 
-function makeTile(paths) {
-  const buf = new Buf(TW, TH);
+function paintTrack(buf, paths) {
   const sampled = paths.map(([a, b]) => sample(E[a] ?? a, E[b] ?? b));
 
-  // 1) ballast bed — opaque band hugging every path, with stable speckle
+  // 1) ballast bed — multi-tone gravel, darker shoulder, stray grass tufts
   for (let y = 0; y < TH; y++)
     for (let x = 0; x < TW; x++) {
       let d = Infinity;
       for (const p of sampled) d = Math.min(d, distToPath(x + 0.5, y + 0.5, p));
       if (d > BAND) continue;
-      const edge = d > BAND - 1.5; // feather the rim slightly
       const r = hash(x, y);
-      const col = r < 0.18 ? BALLAST_DK : r > 0.85 ? BALLAST_LT : BALLAST;
-      buf.px(x, y, col, edge ? 150 : 255);
+      if (d > BAND - 1) {
+        if (r > 0.6) buf.px(x, y, r > 0.85 ? TUFT : TUFT_DK, 200); // tufts at the rim
+        continue;
+      }
+      let col;
+      if (d > BAND - 3) col = r < 0.5 ? SHOULDER : BALLAST_DK; // shoulder
+      else if (r < 0.16) col = BALLAST_DK;
+      else if (r > 0.92) col = BALLAST_XL;
+      else if (r > 0.72) col = BALLAST_LT;
+      else col = BALLAST;
+      buf.px(x, y, col, 255);
     }
 
-  // 2) sleepers, evenly along each path
-  for (const p of sampled) {
-    for (let i = 4; i < p.length - 3; i += 5) {
-      const a = p[i - 1],
-        b = p[i + 1];
-      drawTie(buf, p[i], [b[0] - a[0], b[1] - a[1]]);
+  // 2) sleepers (with chairs), evenly along each path — spaced so gravel shows
+  for (const p of sampled)
+    for (let i = 6; i < p.length - 5; i += 12) {
+      const a = p[i - 1], b = p[i + 1];
+      drawSleeper(buf, p[i], [b[0] - a[0], b[1] - a[1]]);
     }
-  }
 
-  // 3) the two steel rails
+  // 3) the two steel rails, on top
   for (const p of sampled) {
     drawRail(buf, p, +1);
     drawRail(buf, p, -1);
   }
+}
+
+function makeTile(paths) {
+  const buf = new Buf(TW, TH);
+  paintTrack(buf, paths);
   return buf;
 }
 
-// filled disc (for lamp lenses and their glow)
-function disc(buf, cx, cy, r, color, a = 255) {
-  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
-    for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
-      const dx = x - cx, dy = y - cy;
-      if (dx * dx + dy * dy <= r * r) buf.px(x, y, color, a);
-    }
-}
-
-// A trackside colour-light signal whose foot stands at (bx,by). The head holds
-// three lenses — green (top), yellow, red (bottom) — and `aspect` lights one.
+// A trackside colour-light signal whose foot stands at (bx,by). Backboard +
+// hooded lenses (green top, yellow, red bottom); `aspect` lights one. Includes
+// a concrete foundation and a maintenance ladder up the mast.
 function drawSignal(buf, bx, by, aspect) {
-  // mast
-  for (let y = by - 10; y <= by; y++) {
+  const headBot = by - 22, headTop = by - 56;
+  // foundation
+  for (let y = by - 1; y <= by + 4; y++)
+    for (let x = bx - 4; x <= bx + 4; x++) buf.px(x, y, y === by - 1 ? CONCRETE_HI : CONCRETE);
+  // mast (3px) + ladder on the right
+  for (let y = headBot; y <= by; y++) {
     buf.px(bx - 1, y, SIG_POST_HI);
     buf.px(bx, y, SIG_POST);
+    buf.px(bx + 1, y, SIG_POST_DK);
   }
-  buf.px(bx - 2, by, SIG_HEAD); // foot
-  buf.px(bx + 1, by, SIG_HEAD);
-  // head housing
-  for (let y = by - 27; y <= by - 10; y++)
-    for (let x = bx - 4; x <= bx + 4; x++) buf.px(x, y, SIG_HEAD);
-  for (let y = by - 27; y <= by - 10; y++) buf.px(bx - 4, y, SIG_HEAD_HI); // lit edge
-  // the three lenses
-  const lenses = [["green", by - 23], ["yellow", by - 18], ["red", by - 13]];
+  for (let y = headBot + 2; y <= by - 2; y++) {
+    buf.px(bx + 3, y, SIG_POST_DK); // ladder stringer
+    buf.px(bx + 4, y, SIG_POST_DK);
+    if ((y & 1) === 0) for (let x = bx + 3; x <= bx + 4; x++) buf.px(x, y, SIG_POST_HI); // rungs
+  }
+  // backboard + housing
+  for (let y = headTop - 1; y <= headBot + 1; y++)
+    for (let x = bx - 9; x <= bx + 9; x++) buf.px(x, y, SIG_BACK);
+  for (let y = headTop; y <= headBot; y++)
+    for (let x = bx - 7; x <= bx + 7; x++) buf.px(x, y, SIG_HEAD);
+  for (let y = headTop; y <= headBot; y++) buf.px(bx - 7, y, SIG_BORDER); // lit edge
+  for (let x = bx - 9; x <= bx + 9; x++) buf.px(x, headTop - 1, SIG_BORDER); // top cap
+  // the three lenses, each under a hood
+  const lenses = [["green", headTop + 6], ["yellow", by - 39], ["red", headBot - 6]];
   for (const [name, cy] of lenses) {
+    for (let x = bx - 5; x <= bx + 5; x++) buf.px(x, cy - 6, SIG_BACK); // hood
+    for (let x = bx - 5; x <= bx + 5; x++) buf.px(x, cy - 5, SIG_POST_DK);
     const lit = name === aspect;
-    buf.px(bx, cy - 3, [0x10, 0x12, 0x14]); // little hood over each lens
-    if (lit) disc(buf, bx, cy, 3.4, LAMP_LIT[name], 55); // glow
-    disc(buf, bx, cy, 2, lit ? LAMP_LIT[name] : LAMP_DIM[name]);
-    if (lit) buf.px(bx, cy - 1, [0xff, 0xff, 0xff], 150); // glint
+    if (lit) disc(buf, bx, cy, 7, LAMP_LIT[name], 45); // glow
+    disc(buf, bx, cy, 4, lit ? LAMP_LIT[name] : LAMP_DIM[name]);
+    if (lit) {
+      disc(buf, bx, cy, 2, [0xff, 0xff, 0xff], 120); // hot core
+      buf.px(bx - 1, cy - 1, [0xff, 0xff, 0xff], 200);
+    }
   }
 }
 
-// A straight-track tile (64×32) with the signal rising above it, in a 64×64
-// frame: track sits in the bottom half, the signal post in the top half.
+// A straight-track tile with the signal rising above it, in a 128×128 frame:
+// track sits in the bottom half, the signal post in the top half.
 function makeSignalTile(baseName, aspect, bx, by) {
-  const buf = new Buf(TW, 64);
-  buf.blit(makeTile(TILES[baseName]), 0, TH); // track in the bottom 64×32
+  const buf = new Buf(TW, TW);
+  buf.blit(makeTile(TILES[baseName]), 0, TH);
   drawSignal(buf, bx, by, aspect);
   return buf;
 }
@@ -276,11 +344,10 @@ const TILES = {
 };
 
 // Signalled straights: a colour-light signal stands trackside on each straight.
-// [base straight, signal foot x, signal foot y] in the 64×64 frame (track is in
-// the bottom half, so y≈45 plants the foot on the ground beside the rails).
+// [base, foot x, foot y] in the 128×128 frame (track is the bottom half).
 const SIGNAL_POSTS = [
-  ["straight_a", 46, 45], // post to the upper-right of the ↘ line
-  ["straight_b", 18, 45], // post to the upper-left of the ↙ line
+  ["straight_a", 92, 90], // post to the upper-right of the ↘ line
+  ["straight_b", 36, 90], // post to the upper-left of the ↙ line
 ];
 const ASPECTS = ["green", "yellow", "red"];
 const signalName = (base, aspect) => `${base}_sig_${aspect}`;
@@ -292,9 +359,9 @@ function groundTile(fill, line) {
     for (let x = 0; x < TW; x++) {
       const cx = (x + 0.5 - CX) / (TW / 2);
       const cy = (y + 0.5 - CY) / (TH / 2);
-      const m = Math.abs(cx) + Math.abs(cy); // diamond mask
+      const m = Math.abs(cx) + Math.abs(cy);
       if (m > 1) continue;
-      buf.px(x, y, m > 0.9 ? line : fill, 255);
+      buf.px(x, y, m > 0.92 ? line : fill, 255);
     }
   return buf;
 }
@@ -312,10 +379,9 @@ async function main() {
   for (const [base, bx, by] of SIGNAL_POSTS)
     for (const aspect of ASPECTS) {
       const name = signalName(base, aspect);
-      const buf = makeSignalTile(base, aspect, bx, by);
-      built[name] = buf;
+      built[name] = makeSignalTile(base, aspect, bx, by);
       signalNames.push(name);
-      await writeFile(join(TILE_DIR, `${name}.png`), buf.toPNG());
+      await writeFile(join(TILE_DIR, `${name}.png`), built[name].toPNG());
     }
   const allNames = [...Object.keys(TILES), ...signalNames];
   console.log(`✓ ${allNames.length} track tiles (${signalNames.length} signalled) → ${TILE_DIR}`);
@@ -324,13 +390,12 @@ async function main() {
   if (!process.argv.includes("--preview")) return;
   const grass = groundTile([0x7f, 0xae, 0x54], [0x6f, 0x9c, 0x49]);
 
-  // (a) contact sheet: every tile on a faint diamond, in a tidy grid
+  // (a) contact sheet: every base tile on a faint diamond, in a tidy grid
   const names = Object.keys(TILES);
   const cols = 4;
-  const rows = Math.ceil(names.length / cols);
-  const cell = [96, 64];
-  const sheet = new Buf(cols * cell[0], rows * cell[1]);
-  sheet.d.fill(0); // transparent
+  const cell = [TW + 32, TH + 40];
+  const sheet = new Buf(cols * cell[0], Math.ceil(names.length / cols) * cell[1]);
+  sheet.d.fill(0);
   names.forEach((n, i) => {
     const ox = (i % cols) * cell[0] + (cell[0] - TW) / 2;
     const oy = ((i / cols) | 0) * cell[1] + (cell[1] - TH) / 2;
@@ -340,31 +405,26 @@ async function main() {
   await writeFile("/tmp/railway_tiles_sheet.png", sheet.toPNG());
 
   // (a2) signals sheet: rows = orientation, cols = aspect (green/yellow/red)
-  const scell = [88, 96];
+  const scell = [TW + 32, TW + TH];
   const sig = new Buf(ASPECTS.length * scell[0], SIGNAL_POSTS.length * scell[1]);
   sig.d.fill(0);
   SIGNAL_POSTS.forEach(([base], r) =>
     ASPECTS.forEach((aspect, c) => {
       const gX = c * scell[0] + (scell[0] - TW) / 2;
-      const gY = r * scell[1] + scell[1] - TH - 10;
+      const gY = r * scell[1] + scell[1] - TH - 18;
       sig.blit(grass, gX, gY);
-      sig.blit(built[signalName(base, aspect)], gX, gY - TH); // lift the tall tile
+      sig.blit(built[signalName(base, aspect)], gX, gY - TH);
     }),
   );
   await writeFile("/tmp/railway_signals.png", sig.toPNG());
 
-  // (b) demo scene: a track "roundabout" (8-cell ring around a central crossing,
-  // which exercises all four curves, all four switches and the cross) plus a
-  // branch line that runs off the map — every tile type, all connecting.
+  // (b) demo scene: a "roundabout" (ring of curves + switches around a central
+  // crossing) plus a branch line that runs off the map — every tile type, all
+  // connecting, with signals along the branch (green top → yellow → red bottom).
   const layout = {
-    // ring corners (pure curves)
     "3,3": "curve_br_bl", "5,3": "curve_bl_tl", "5,5": "curve_tl_tr", "3,5": "curve_tr_br",
-    // ring mid-sides (switches, each peeling a branch into the centre)
     "4,3": "switch_a_bl", "3,4": "switch_b_br", "5,4": "switch_b_tl", "4,5": "switch_a_tr",
-    // the hub
     "4,4": "cross",
-    // a branch line running in from the top edge and out the right edge, with
-    // signals along it: green at the very top → yellow → red at the very bottom
     "6,0": "straight_b_sig_green", "6,1": "straight_b", "6,2": "curve_tr_br",
     "7,2": "straight_a_sig_yellow", "8,2": "straight_a", "9,2": "straight_a_sig_red",
   };
@@ -381,27 +441,26 @@ async function main() {
     for (const e of usedEdges(name)) {
       const [dx, dy, opp] = DIR[e];
       const nx = gx + dx, ny = gy + dy;
-      if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID) continue; // off-map: ok
+      if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID) continue;
       const n = layout[`${nx},${ny}`];
       if (!n || !usedEdges(n).includes(opp))
         throw new Error(`dangling rail: ${name}@${key} edge ${e} → ${n ?? "empty"}@${nx},${ny}`);
     }
   }
   console.log("✓ demo layout is fully connected");
+
   const sceneW = (GRID + GRID) * (TW / 2);
-  const sceneH = (GRID + GRID) * (TH / 2) + TH;
+  const sceneH = (GRID + GRID) * (TH / 2) + TW;
   const scene = new Buf(sceneW, sceneH);
   scene.d.fill(0);
   const baseX = sceneW / 2 - TW / 2;
-  const baseY = TH;
+  const baseY = TW - TH;
   const isoX = (gx, gy) => baseX + (gx - gy) * (TW / 2);
   const isoY = (gx, gy) => baseY + (gx + gy) * (TH / 2);
   for (let gy = 0; gy < GRID; gy++)
     for (let gx = 0; gx < GRID; gx++) scene.blit(grass, isoX(gx, gy), isoY(gx, gy));
-  // paint track back-to-front (gx+gy) so tall signal posts overlap correctly;
-  // a tile taller than one cell is lifted so its diamond still sits in the cell.
   Object.entries(layout)
-    .map(([k, t]) => ({ k, t, g: k.split(",").map(Number) }))
+    .map(([k, t]) => ({ t, g: k.split(",").map(Number) }))
     .sort((a, b) => a.g[0] + a.g[1] - (b.g[0] + b.g[1]))
     .forEach(({ t, g: [gx, gy] }) =>
       scene.blit(built[t], isoX(gx, gy), isoY(gx, gy) + (TH - built[t].h)),

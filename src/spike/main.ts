@@ -13,9 +13,10 @@
  */
 import { Application, Assets, Container, Graphics, Sprite, type Texture } from "pixi.js";
 
-const TW = 64; // iso tile width (pixels)
-const TH = 32; // iso tile height — 2:1 classic iso
+const TW = 128; // iso tile width (pixels) — tiles are authored at 2× for detail
+const TH = 64; // iso tile height — 2:1 classic iso
 const GRID = 10; // board is GRID×GRID tiles
+const FIT = 0.6; // default zoom so the bigger board frames nicely
 
 // Grid (gx, gy) → screen pixels at the tile's centre.
 const isoX = (gx: number, gy: number) => (gx - gy) * (TW / 2);
@@ -84,9 +85,10 @@ async function main() {
   world.addChild(train);
 
   // --- camera: centre the board, drag to pan, wheel to zoom -------------
+  world.scale.set(FIT);
   const recentre = () => {
     world.x = app.screen.width / 2;
-    world.y = app.screen.height / 2 - isoY(GRID - 1, GRID - 1) / 2;
+    world.y = app.screen.height / 2 - (isoY(GRID - 1, GRID - 1) / 2) * world.scale.y;
   };
   recentre();
   window.addEventListener("resize", recentre);
@@ -171,9 +173,9 @@ function makeArt(app: Application) {
   };
 
   const trainG = new Graphics()
-    .roundRect(-20, -16, 40, 20, 6)
+    .roundRect(-30, -24, 60, 30, 8)
     .fill(0xe53e3e)
-    .stroke({ width: 2, color: 0x9b2c2c });
+    .stroke({ width: 3, color: 0x9b2c2c });
 
   return {
     grass: diamond(0x7fae54, 0x6f9c49),
