@@ -453,11 +453,18 @@ and berth positions become edge-relative.
    Waterloo main (Pinhoe/Honiton) — that main isn't modelled, so the divergence
    can't be drawn without adding it as a new line. Deferred: merge Paignton's
    duplicated EXD→NTA trunk edges; extend/curve geometry near Central.
-6. Bring in the user's 3D area model (**GLB**, committed under `public/`) as the
-   world backdrop; align rails to it via 2 reference points + scale; lay
-   edge-rails over it.
+6. **PARKED** — the custom 3D area model backdrop. User's export was 250 MB
+   (too big for git AND too heavy for the browser to render); optimisation
+   (`gltf-transform optimize`) / re-export stalled, so the user chose to **skip
+   the GLB** and polish the built-in Map Mode instead. If revisited: GLB only
+   (native to Three.js via drei `useGLTF`; STL=geometry-only, 3MF=print-
+   oriented), optimise to <~40 MB, drop in `public/`, georeference via 2 known
+   points + metres scale. Git LFS is NOT a fix (solves storage, not the
+   render/load weight; this container likely won't pull LFS objects anyway).
 
-**GLB note:** user is exporting an area model — GLB chosen (native to Three.js
-via drei `useGLTF`; STL=geometry-only, 3MF=print-oriented). Goes in `public/`
-(Vite serves it; loaded at runtime, not bundled). It's the *backdrop*, separate
-from track topology. Needs georeferencing (2 known points + metres scale).
+**Map Mode polish (in progress):** `src/scene/Ground.tsx` got a first pass —
+Devon farmland patchwork (`Fields`, instanced coloured quads off-water), varied
+tree greens (per-instance colour), and two-row hazing hills ringing the inland
+arc. Land-mode only; Dev Mode untouched. Water/Buildings/Clouds unchanged so far
+— candidates for the next pass (beach/shoreline, building variety, cloud
+shadows).
