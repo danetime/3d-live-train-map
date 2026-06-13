@@ -23,6 +23,9 @@ type TrainStore = {
   /** Visual style: clean signalling diagram vs low-poly landscape. */
   theme: Theme;
   toggleTheme: () => void;
+  /** Which view is active: the 3D world, or the 2D linear schematic. */
+  viewMode: "3d" | "schematic";
+  toggleViewMode: () => void;
   /** Replace the full set of trains (called by the feed each tick). */
   setTrains: (trains: Train[]) => void;
   /** Update progress for the animation loop without replacing identities. */
@@ -56,6 +59,9 @@ export const useTrainStore = create<TrainStore>((set) => ({
   setDataSource: (dataSource) => set({ dataSource }),
   theme: "dev",
   toggleTheme: () => set((s) => ({ theme: s.theme === "dev" ? "land" : "dev" })),
+  // This branch leads with the linear schematic; flip to "3d" to compare.
+  viewMode: "schematic",
+  toggleViewMode: () => set((s) => ({ viewMode: s.viewMode === "3d" ? "schematic" : "3d" })),
   setTrains: (trains) => set({ trains }),
   advance: (updates) =>
     set((state) => {

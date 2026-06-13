@@ -10,6 +10,67 @@
   box-sizing: border-box;
 }
 
+/* ---- Linear schematic view ---- */
+.schematic-map {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 35%, #16233c 0%, #0b1220 70%);
+}
+.schematic-map svg {
+  display: block;
+}
+.sm-label {
+  fill: #b6c2d6;
+  font-size: 13px;
+  font-weight: 500;
+  paint-order: stroke;
+  stroke: #0b1220;
+  stroke-width: 3px;
+  pointer-events: none;
+}
+.sm-hub {
+  fill: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+}
+.sm-train {
+  cursor: pointer;
+}
+.sm-code {
+  fill: #e8eef7;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: #0b1220;
+  stroke-width: 3px;
+  pointer-events: none;
+}
+.sm-code-sel {
+  fill: #7dff9b;
+}
+
+/* View switch button (3D ⇄ Linear) */
+.view-switch {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(11, 18, 32, 0.82);
+  color: #e8eef7;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.view-switch:hover {
+  background: rgba(20, 32, 56, 0.92);
+}
+
 html,
 body,
 #root,

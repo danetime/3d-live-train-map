@@ -468,3 +468,29 @@ tree greens (per-instance colour), and two-row hazing hills ringing the inland
 arc. Land-mode only; Dev Mode untouched. Water/Buildings/Clouds unchanged so far
 — candidates for the next pass (beach/shoreline, building variety, cloud
 shadows).
+
+---
+
+## 14. Linear schematic view (branch `design/linear-look`)
+
+An alternative **view** (not a new data model) — a tube-map / strip-diagram of
+the network, proving the "core vs view" split from ARCHITECTURE.md: it reuses
+the live feed, the store and the line/station data, and only swaps the drawing.
+
+- `src/schematic/layout.ts` — abstract schematic grid: `SCHEMATIC_POS` (main
+  line as one horizontal spine; Exmouth + Paignton branches drop vertically from
+  EXD / NTA), `lineDrawStops` (skips a branch's shared trunk), and
+  `schematicPos(lineId, t)` (interpolates a train's line param between stop
+  positions). Pure data — no rendering.
+- `src/schematic/SchematicMap.tsx` — SVG view. Its own rAF loop advances each
+  train exactly like `Train.tsx` (mock trains self-propel + bounce; live trains
+  ease toward the feed `t`) and moves the SVG groups imperatively (no per-frame
+  React render). Click a train to select (shares the store selection + the HUD
+  panel).
+- `store.viewMode` (`"3d" | "schematic"`, default **schematic** on this branch)
+  + `App.tsx` view switch button (🚆 3D ⇄ 📊 Linear). The HUD overlays both.
+
+v1 polish candidates: 45°/angled branches instead of vertical, direction arrows
+on trains, station labels collision-tuning, signals, a header/legend styled to
+match. Everything else (server, data, track graph) is shared with the core
+branch — merge the view back if it's a keeper, or bin the branch if not.
