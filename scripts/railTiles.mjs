@@ -51,7 +51,9 @@ const E = {
 const CENTRE = [CX, CY];
 
 const GAUGE = 14; // screen px between the two rails
-const BAND = 17; // ballast half-width (iso-stretched on x)
+const BAND = 16; // ballast half-width (iso-stretched on x)
+const BED_EXT = 34; // run the bed straight off each edge (kills rounded caps)
+const SLEEPER_GAP = 9; // target sleeper spacing, in px of arc length
 
 // ---- palette (muted, to sit on the board's #e7e1d3 / grass #7fae54) --------
 const BALLAST = [0x8a, 0x82, 0x78];
@@ -187,6 +189,41 @@ const unit = (tx, ty) => {
   return [tx / L, ty / L];
 };
 
+// Place markers along a polyline at even arc-length spacing, with half-spacing
+// margins at both ends — so the rhythm continues unbroken across tile seams.
+// Returns [point, tangent] pairs.
+function arcPlace(pts, gap) {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++)
+    cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const L = cum[cum.length - 1];
+  const n = Math.max(1, Math.round(L / gap));
+  const s = L / n;
+  const out = [];
+  for (let k = 0; k < n; k++) {
+    const d = (k + 0.5) * s;
+    let i = 1;
+    while (i < cum.length && cum[i] < d) i++;
+    const t = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+    const x = pts[i - 1][0] + t * (pts[i][0] - pts[i - 1][0]);
+    const y = pts[i - 1][1] + t * (pts[i][1] - pts[i - 1][1]);
+    const a = pts[Math.max(0, i - 2)], b = pts[Math.min(pts.length - 1, i + 1)];
+    out.push([[x, y], [b[0] - a[0], b[1] - a[1]]]);
+  }
+  return out;
+}
+
+// Clip a track tile to its diamond so the ballast is cut flush at the edge and
+// meets the neighbour's bed exactly (no bleed into the rectangular corners).
+function maskDiamond(buf) {
+  for (let y = 0; y < TH; y++)
+    for (let x = 0; x < TW; x++) {
+      const cx = (x + 0.5 - CX) / (TW / 2);
+      const cy = (y + 0.5 - CY) / (TH / 2);
+      if (Math.abs(cx) + Math.abs(cy) > 1) buf.d[(y * buf.w + x) * 4 + 3] = 0;
+    }
+}
+
 // A shaded wooden sleeper centred at p, laid across the track (along the normal),
 // with a cast-iron chair where each rail will cross it.
 function drawSleeper(buf, [x, y], [tx, ty]) {
@@ -236,12 +273,21 @@ function drawRail(buf, pts, side) {
 
 function paintTrack(buf, paths) {
   const sampled = paths.map(([a, b]) => sample(E[a] ?? a, E[b] ?? b));
+  // Extended polylines for the bed only: push each end straight out past the
+  // tile edge so the band has no rounded cap and meets the neighbour flush.
+  const beds = sampled.map((p) => {
+    const out = (i0, i1) => {
+      const [ux, uy] = unit(p[i0][0] - p[i1][0], p[i0][1] - p[i1][1]);
+      return [p[i0][0] + ux * BED_EXT, p[i0][1] + uy * BED_EXT];
+    };
+    return [out(0, 3), ...p, out(p.length - 1, p.length - 4)];
+  });
 
   // 1) ballast bed — multi-tone gravel, darker shoulder, stray grass tufts
   for (let y = 0; y < TH; y++)
     for (let x = 0; x < TW; x++) {
       let d = Infinity;
-      for (const p of sampled) d = Math.min(d, distToPath(x + 0.5, y + 0.5, p));
+      for (const p of beds) d = Math.min(d, distToPath(x + 0.5, y + 0.5, p));
       if (d > BAND) continue;
       const r = hash(x, y);
       if (d > BAND - 1) {
@@ -257,12 +303,10 @@ function paintTrack(buf, paths) {
       buf.px(x, y, col, 255);
     }
 
-  // 2) sleepers (with chairs), evenly along each path — spaced so gravel shows
+  // 2) sleepers (with chairs), placed by arc length so the rhythm carries
+  //    across tile seams (half-spacing margin at each edge)
   for (const p of sampled)
-    for (let i = 6; i < p.length - 5; i += 12) {
-      const a = p[i - 1], b = p[i + 1];
-      drawSleeper(buf, p[i], [b[0] - a[0], b[1] - a[1]]);
-    }
+    for (const [pt, tan] of arcPlace(p, SLEEPER_GAP)) drawSleeper(buf, pt, tan);
 
   // 3) the two steel rails, on top
   for (const p of sampled) {
@@ -274,6 +318,7 @@ function paintTrack(buf, paths) {
 function makeTile(paths) {
   const buf = new Buf(TW, TH);
   paintTrack(buf, paths);
+  maskDiamond(buf); // cut the bed flush at the diamond edge for seamless joins
   return buf;
 }
 
