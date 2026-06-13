@@ -42,6 +42,12 @@ export function Hud() {
             : "3D train map · simulated data"}
         </p>
 
+        {__APP_BRANCH__ && (
+          <div className="branch-chip" title="Git branch you're viewing">
+            ⎇ {__APP_BRANCH__}
+          </div>
+        )}
+
 
         <div className="legend">
           {LINES.map((line) => (
