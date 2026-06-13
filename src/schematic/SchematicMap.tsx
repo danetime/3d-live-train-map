@@ -27,7 +27,7 @@ import {
 } from "./layout";
 import { schematicSignals } from "./signals";
 
-const UX = 66; // px per x grid unit
+const UX = 90; // px per x grid unit (wider = more space along the main line)
 const UY = 58; // px per y grid unit
 const PAD = 90; // px margin around the diagram
 const W = (SCHEMATIC_BOUNDS.maxX - SCHEMATIC_BOUNDS.minX) * UX + PAD * 2;
