@@ -78,7 +78,8 @@
 .view-schematic .hud-top-right {
   top: auto;
   bottom: max(12px, env(safe-area-inset-bottom));
-  max-height: 42vh;
+  /* Fit within the viewport (scrolls internally) so the list is never cut off. */
+  max-height: min(58vh, calc(100dvh - 110px));
 }
 .view-schematic .view-switch {
   left: 14px;
@@ -204,6 +205,9 @@ canvas {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   z-index: 10;
   max-width: 44vw;
+  /* Never run off the page: cap to the viewport and scroll inside instead. */
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
 }
 
 .hud-top-left {
