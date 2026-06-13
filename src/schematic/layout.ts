@@ -1,52 +1,55 @@
 /**
  * Schematic (strip-map / metro-diagram) layout for the linear view.
  *
- * Abstract grid coordinates (x → right, y → down) — NOT geographic. The through
- * main line is a single horizontal spine, Taunton on the left through Exeter
- * St David's and Newton Abbot to Plymouth on the right; the Exmouth (Avocet) and
- * Paignton (Riviera) branches drop vertically from their junction stations
- * (St David's and Newton Abbot). Trains are placed by interpolating their line
- * param `t` between the schematic positions of the stops it lies between — so
- * this view reuses the same live feed + line data as the 3D world, just drawn
- * as clean straight lines.
+ * Abstract grid coordinates (x → right, y → down) — NOT geographic, but oriented
+ * like a map: WEST on the left, EAST on the right. So the through main line is a
+ * horizontal spine with Plymouth (west) on the left, through Newton Abbot and
+ * Exeter St David's, to Taunton (east) on the right; the Paignton (Riviera) and
+ * Exmouth (Avocet) branches drop vertically from their junctions (Newton Abbot
+ * and St David's). Trains are placed by interpolating their line param `t`
+ * between the schematic positions of the stops they lie between, and segments
+ * know whether they're double track (`lineSegments`) — reusing the same live
+ * feed + track graph as the 3D world, just drawn as clean straight lines.
  */
 import { LINE_BY_ID } from "../data/network";
 import { lineStopParams } from "../data/lineCurves";
+import { trackGraph } from "../data/trackGraph";
 
 export type Pt = { x: number; y: number };
 
 export const SCHEMATIC_POS: Record<string, Pt> = {
-  // Main-line spine (y = 0): Taunton … Exeter … Newton Abbot … Plymouth
-  TAU: { x: 0, y: 0 },
-  TVP: { x: 1.5, y: 0 },
-  EXD: { x: 3.4, y: 0 }, // junction: Exmouth branch drops here
-  EXT: { x: 4.6, y: 0 },
-  MRB: { x: 5.3, y: 0 },
-  SCS: { x: 6.3, y: 0 },
-  DWW: { x: 7.1, y: 0 },
-  DWL: { x: 7.9, y: 0 },
-  TGM: { x: 8.8, y: 0 },
-  NTA: { x: 10.4, y: 0 }, // junction: Paignton branch drops here
-  TOT: { x: 11.6, y: 0 },
-  IVY: { x: 12.6, y: 0 },
-  PLY: { x: 13.8, y: 0 },
-
-  // Exmouth (Avocet) branch — drops from St David's
-  EXC: { x: 3.4, y: 1.3 },
-  SJP: { x: 3.4, y: 2.1 },
-  POL: { x: 3.4, y: 2.9 },
-  DIG: { x: 3.4, y: 3.7 },
-  NCO: { x: 3.4, y: 4.5 },
-  TOP: { x: 3.4, y: 5.3 },
-  EXN: { x: 3.4, y: 6.1 },
-  LYC: { x: 3.4, y: 6.9 },
-  LYM: { x: 3.4, y: 7.7 },
-  EXM: { x: 3.4, y: 8.5 },
+  // Main-line spine (y = 0): Plymouth (west/left) … Newton Abbot … Exeter …
+  // Tiverton Parkway … Taunton (east/right).
+  PLY: { x: 0, y: 0 },
+  IVY: { x: 1.2, y: 0 },
+  TOT: { x: 2.2, y: 0 },
+  NTA: { x: 3.4, y: 0 }, // junction: Paignton branch drops here
+  TGM: { x: 5.0, y: 0 },
+  DWL: { x: 5.9, y: 0 },
+  DWW: { x: 6.7, y: 0 },
+  SCS: { x: 7.5, y: 0 },
+  MRB: { x: 8.5, y: 0 },
+  EXT: { x: 9.2, y: 0 },
+  EXD: { x: 10.4, y: 0 }, // junction: Exmouth branch drops here
+  TVP: { x: 12.3, y: 0 },
+  TAU: { x: 13.8, y: 0 },
 
   // Paignton (Riviera) branch — drops from Newton Abbot
-  TRR: { x: 10.4, y: 1.3 },
-  TQY: { x: 10.4, y: 2.1 },
-  PGN: { x: 10.4, y: 2.9 },
+  TRR: { x: 3.4, y: 1.3 },
+  TQY: { x: 3.4, y: 2.1 },
+  PGN: { x: 3.4, y: 2.9 },
+
+  // Exmouth (Avocet) branch — drops from St David's
+  EXC: { x: 10.4, y: 1.3 },
+  SJP: { x: 10.4, y: 2.1 },
+  POL: { x: 10.4, y: 2.9 },
+  DIG: { x: 10.4, y: 3.7 },
+  NCO: { x: 10.4, y: 4.5 },
+  TOP: { x: 10.4, y: 5.3 },
+  EXN: { x: 10.4, y: 6.1 },
+  LYC: { x: 10.4, y: 6.9 },
+  LYM: { x: 10.4, y: 7.7 },
+  EXM: { x: 10.4, y: 8.5 },
 };
 
 /** Bounding box of the schematic, for sizing the SVG viewBox. */
@@ -62,6 +65,23 @@ export function lineDrawStops(lineId: string): string[] {
   if (!line) return [];
   const start = line.drawFrom ? line.stops.indexOf(line.drawFrom) : 0;
   return line.stops.slice(Math.max(0, start));
+}
+
+/** A drawn segment between two adjacent stops, flagged double-track or not. */
+export type Seg = { a: Pt; b: Pt; double: boolean };
+
+/** Segments to draw for a line, each tagged with its track type from the graph. */
+export function lineSegments(lineId: string): Seg[] {
+  const stops = lineDrawStops(lineId);
+  const out: Seg[] = [];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const a = SCHEMATIC_POS[stops[i]];
+    const b = SCHEMATIC_POS[stops[i + 1]];
+    if (!a || !b) continue;
+    const edge = trackGraph.edges.get(`${lineId}:${stops[i]}-${stops[i + 1]}`);
+    out.push({ a, b, double: !!edge?.doubleTrack });
+  }
+  return out;
 }
 
 /** Schematic point for a train at line param `t` (0..1), by interpolating

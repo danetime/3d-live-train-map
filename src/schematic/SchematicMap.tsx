@@ -15,13 +15,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LINES, LINE_BY_ID, STATIONS } from "../data/network";
 import { useTrainStore } from "../store/useTrainStore";
-import {
-  SCHEMATIC_POS,
-  SCHEMATIC_BOUNDS,
-  lineDrawStops,
-  schematicPos,
-  type Pt,
-} from "./layout";
+import { SCHEMATIC_POS, SCHEMATIC_BOUNDS, lineSegments, schematicPos } from "./layout";
 
 const UX = 66; // px per x grid unit
 const UY = 58; // px per y grid unit
@@ -37,6 +31,7 @@ const HUBS = new Set(["EXD", "NTA"]);
 
 const MIN_W = W * 0.18; // most zoomed-in
 const MAX_W = W * 1.5; // most zoomed-out
+const RAIL_GAP = 4.5; // px offset of each rail from the centre on double track
 
 type Param = { t: number; dir: 1 | -1 };
 type Box = { x: number; y: number; w: number; h: number };
@@ -172,26 +167,42 @@ export function SchematicMap() {
           }}
         />
 
-        {/* Route lines */}
-        {LINES.map((line) => {
-          const pts = lineDrawStops(line.id)
-            .map((code) => SCHEMATIC_POS[code])
-            .filter((p): p is Pt => !!p)
-            .map((p) => `${px(p.x)},${py(p.y)}`)
-            .join(" ");
-          return (
-            <polyline
-              key={line.id}
-              points={pts}
-              fill="none"
-              stroke={line.color}
-              strokeWidth={7}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={0.92}
-            />
-          );
-        })}
+        {/* Route lines — a single line, or twin rails where double track */}
+        {LINES.flatMap((line) =>
+          lineSegments(line.id).map((seg, i) => {
+            const ax = px(seg.a.x);
+            const ay = py(seg.a.y);
+            const bx = px(seg.b.x);
+            const by = py(seg.b.y);
+            const key = `${line.id}-${i}`;
+            if (!seg.double) {
+              return (
+                <line
+                  key={key}
+                  x1={ax}
+                  y1={ay}
+                  x2={bx}
+                  y2={by}
+                  stroke={line.color}
+                  strokeWidth={6}
+                  strokeLinecap="round"
+                  opacity={0.92}
+                />
+              );
+            }
+            const dx = bx - ax;
+            const dy = by - ay;
+            const len = Math.hypot(dx, dy) || 1;
+            const ox = (-dy / len) * RAIL_GAP;
+            const oy = (dx / len) * RAIL_GAP;
+            return (
+              <g key={key}>
+                <line x1={ax + ox} y1={ay + oy} x2={bx + ox} y2={by + oy} stroke={line.color} strokeWidth={4} strokeLinecap="round" opacity={0.92} />
+                <line x1={ax - ox} y1={ay - oy} x2={bx - ox} y2={by - oy} stroke={line.color} strokeWidth={4} strokeLinecap="round" opacity={0.92} />
+              </g>
+            );
+          }),
+        )}
 
         {/* Stations */}
         {Object.entries(SCHEMATIC_POS).map(([code, p]) => {
