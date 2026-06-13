@@ -12,10 +12,11 @@
  * to pan, pinch (ctrl+wheel) or the on-screen buttons to zoom. Trains live
  * inside the same viewBox so they pan/zoom with the diagram.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LINES, LINE_BY_ID, STATIONS } from "../data/network";
 import { useTrainStore } from "../store/useTrainStore";
 import { SCHEMATIC_POS, SCHEMATIC_BOUNDS, lineSegments, schematicPos } from "./layout";
+import { schematicSignals } from "./signals";
 
 const UX = 66; // px per x grid unit
 const UY = 58; // px per y grid unit
@@ -36,14 +37,69 @@ const RAIL_GAP = 4.5; // px offset of each rail from the centre on double track
 type Param = { t: number; dir: 1 | -1 };
 type Box = { x: number; y: number; w: number; h: number };
 
+type SigGeom = {
+  key: string;
+  id: string;
+  lineId: string;
+  dir: 1 | -1;
+  lo: number;
+  hi: number;
+  double: boolean;
+  cx: number;
+  cy: number;
+  lx: number;
+  ly: number;
+  anchor: "start" | "middle" | "end";
+};
+
+const SIG_OFF = 11; // px offset of a signal from its line, on its rail's side
+
 export function SchematicMap() {
   const trains = useTrainStore((s) => s.trains);
   const selectedId = useTrainStore((s) => s.selectedId);
   const select = useTrainStore((s) => s.select);
+  const selectedSignal = useTrainStore((s) => s.selectedSignal);
+  const selectSignal = useTrainStore((s) => s.selectSignal);
 
   const groupRefs = useRef(new Map<string, SVGGElement>());
   const params = useRef(new Map<string, Param>());
+  const signalRefs = useRef(new Map<string, SVGCircleElement>());
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Signal geometry (static): position each real signal just off its rail.
+  const signals = useMemo<SigGeom[]>(() => {
+    const out: SigGeom[] = [];
+    for (const line of LINES) {
+      for (const s of schematicSignals(line.id)) {
+        const a = schematicPos(s.lineId, s.t);
+        const b = schematicPos(s.lineId, s.t + s.dir * 0.004);
+        const dx = px(b.x) - px(a.x);
+        const dy = py(b.y) - py(a.y);
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len; // perpendicular (flips with travel direction)
+        const ny = dx / len;
+        const ax = px(a.x);
+        const ay = py(a.y);
+        out.push({
+          key: `${s.lineId}:${s.id}:${s.dir}`,
+          id: s.id,
+          lineId: s.lineId,
+          dir: s.dir,
+          lo: s.lo,
+          hi: s.hi,
+          double: s.double,
+          cx: ax + nx * SIG_OFF,
+          cy: ay + ny * SIG_OFF,
+          lx: ax + nx * (SIG_OFF + 6),
+          ly: ay + ny * (SIG_OFF + 6),
+          anchor: nx > 0.2 ? "start" : nx < -0.2 ? "end" : "middle",
+        });
+      }
+    }
+    return out;
+  }, []);
+  const sigRef = useRef(signals);
+  sigRef.current = signals;
 
   const [vb, setVb] = useState<Box>({ x: 0, y: 0, w: W, h: H });
   const drag = useRef<{ x: number; y: number; vbx: number; vby: number; s: number } | null>(null);
@@ -135,6 +191,38 @@ export function SchematicMap() {
         }
       }
       for (const id of params.current.keys()) if (!seen.has(id)) params.current.delete(id);
+
+      // Signal aspects: RED while a train occupies the block ahead.
+      const byLine = new Map<string, { t: number; dir: 1 | -1 }[]>();
+      for (const tr of live) {
+        const p = params.current.get(tr.id);
+        if (!p) continue;
+        const arr = byLine.get(tr.lineId);
+        if (arr) arr.push({ t: p.t, dir: p.dir });
+        else byLine.set(tr.lineId, [{ t: p.t, dir: p.dir }]);
+      }
+      const sel = useTrainStore.getState().selectedSignal;
+      for (const sig of sigRef.current) {
+        const ts = byLine.get(sig.lineId);
+        let occ = false;
+        if (ts) {
+          for (const tr of ts) {
+            if (sig.double && tr.dir !== sig.dir) continue;
+            if (tr.t >= sig.lo && tr.t <= sig.hi) {
+              occ = true;
+              break;
+            }
+          }
+        }
+        const el = signalRefs.current.get(sig.key);
+        if (el) el.setAttribute("fill", occ ? "#ff3b30" : "#22c55e");
+        if (sel && sel.id === sig.id && sel.lineId === sig.lineId) {
+          const aspect = occ ? "red" : "green";
+          if (useTrainStore.getState().signalAspect !== aspect) {
+            useTrainStore.getState().setSignalAspect(aspect);
+          }
+        }
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -240,6 +328,42 @@ export function SchematicMap() {
                   className={hub ? "sm-label sm-hub" : "sm-label"}
                 >
                   {name}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Signals (colour set imperatively by the animation loop) */}
+        {signals.map((sig) => {
+          const selS =
+            !!selectedSignal && selectedSignal.id === sig.id && selectedSignal.lineId === sig.lineId;
+          return (
+            <g
+              key={sig.key}
+              className="sm-signal"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (moved.current) return;
+                selectSignal({ id: sig.id, lineId: sig.lineId, direction: sig.dir });
+              }}
+            >
+              {selS && <circle cx={sig.cx} cy={sig.cy} r={8} fill="#ffffff" opacity={0.25} />}
+              <circle
+                ref={(el) => {
+                  if (el) signalRefs.current.set(sig.key, el);
+                  else signalRefs.current.delete(sig.key);
+                }}
+                cx={sig.cx}
+                cy={sig.cy}
+                r={selS ? 4.6 : 3.4}
+                fill="#22c55e"
+                stroke="#0b1220"
+                strokeWidth={1.2}
+              />
+              {vb.w < W * 0.55 && (
+                <text x={sig.lx} y={sig.ly} textAnchor={sig.anchor} dominantBaseline="middle" className="sm-signal-label">
+                  {sig.id}
                 </text>
               )}
             </g>

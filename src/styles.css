@@ -114,6 +114,19 @@
 .sm-code-sel {
   fill: #7dff9b;
 }
+.sm-signal {
+  cursor: pointer;
+}
+.sm-signal-label {
+  fill: #9fb0c8;
+  font-size: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: #0b1220;
+  stroke-width: 2.5px;
+  pointer-events: none;
+}
 
 /* View switch button (3D ⇄ Linear) */
 .view-switch {
