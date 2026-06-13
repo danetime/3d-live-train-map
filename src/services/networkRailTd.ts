@@ -40,7 +40,8 @@ export function connectTdFeed(
       // then exact station coordinates; then the hand/demo line map.
       const mileage = berthMileagePosition(r.area, r.berth);
       const exact = mileage ? null : berthLatLng(r.area, r.berth);
-      const pos = mileage ?? exact ?? berthPosition(r.area, r.berth);
+      const demo = mileage || exact ? null : berthPosition(r.area, r.berth);
+      const pos = mileage ?? exact ?? demo;
       if (!pos) {
         unmapped++;
         continue;
@@ -68,7 +69,9 @@ export function connectTdFeed(
         headingTo:
           r.dest ?? (direction === 1 ? line?.destination ?? "" : "Exeter St David's"),
         berth: r.berth,
-        platform: exact?.platform,
+        // Platform + its station, from whichever source places this berth.
+        platform: mileage?.platform ?? exact?.platform ?? demo?.platform,
+        station: mileage?.crs ?? demo?.crs,
         formation: r.formation,
         // No `pos`: even with exact coordinates we ride the spline (berthLatLng
         // already computed the nearest on-line t). Raw lat/lng sits slightly

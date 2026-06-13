@@ -7,6 +7,7 @@ import type { Train as TrainModel } from "../data/types";
 import { LINE_BY_ID } from "../data/network";
 import { lineCurve, branchOffset, lineStopParams } from "../data/lineCurves";
 import { project } from "../data/geo";
+import { platformStandWorld } from "../data/stationLayouts";
 import { GAUGE } from "./RailNetwork";
 import { useTrainStore } from "../store/useTrainStore";
 import { trainPositions } from "../sim/trainPositions";
@@ -212,6 +213,14 @@ export function Train({ train }: { train: TrainModel }) {
 
     let syncHeading = train.headingTo;
 
+    // Standing at a modelled station platform? Park on that platform's lane
+    // (overrides the spline point, where every berth of the station collapses
+    // onto one dot and trains stack).
+    const stand =
+      !train.pos && train.station && train.platform
+        ? platformStandWorld(train.station, train.platform, pos)
+        : null;
+
     if (train.pos) {
       // Point mode: we have exact berth coordinates. Ease to the position and
       // face the direction of travel (derived from how it's moving).
@@ -227,6 +236,22 @@ export function Train({ train }: { train: TrainModel }) {
       if (Math.hypot(dx, dz) > 0.02) {
         group.rotation.y = easeAngle(group.rotation.y, Math.atan2(dx, dz), 0.25);
       }
+    } else if (stand) {
+      // Platform mode: glide from wherever we are onto the platform lane and
+      // settle facing the through axis (by direction of travel). Keep tRef
+      // tracking the feed so departure resumes the spline without a jump.
+      if (!placed.current) {
+        group.position.set(pos.x, RIDE_HEIGHT, pos.z);
+        placed.current = true;
+      }
+      const dx = pos.x - group.position.x;
+      const dz = pos.z - group.position.z;
+      const k = Math.min(delta * 1.8, 1);
+      group.position.set(group.position.x + dx * k, RIDE_HEIGHT, group.position.z + dz * k);
+      dirRef.current = train.direction;
+      tRef.current += (train.t - tRef.current) * Math.min(delta * 2, 1);
+      const heading = stand.heading + (dirRef.current === 1 ? 0 : Math.PI);
+      group.rotation.y = easeAngle(group.rotation.y, heading, Math.min(delta * 4, 1));
     } else {
       // Spline mode. Mock trains self-propel (speed > 0); a live feed sets
       // speed 0 and updates train.t externally, which we ease toward.
@@ -269,6 +294,7 @@ export function Train({ train }: { train: TrainModel }) {
       }
       group.position.set(pos.x, RIDE_HEIGHT, pos.z);
       group.rotation.y = Math.atan2(tangent.x * dir, tangent.z * dir);
+      placed.current = true; // a later platform/point mode glides from here
 
       // Mock trains flip heading at the termini; live trains keep the feed's.
       syncHeading =

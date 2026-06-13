@@ -2,6 +2,9 @@
 import { LINES, LINE_BY_ID } from "../data/network";
 import { useTrainStore } from "../store/useTrainStore";
 import { operatorName, inferStock } from "../data/rollingStock";
+import { normPlatform } from "../data/stationLayouts";
+
+const EXD_PLATFORMS = ["1", "2", "3", "4", "5", "6"];
 
 export function Hud() {
   const trains = useTrainStore((s) => s.trains);
@@ -15,6 +18,8 @@ export function Hud() {
   const selectedSignal = useTrainStore((s) => s.selectedSignal);
   const selectSignal = useTrainStore((s) => s.selectSignal);
   const signalAspect = useTrainStore((s) => s.signalAspect);
+  const selectedStation = useTrainStore((s) => s.selectedStation);
+  const selectStation = useTrainStore((s) => s.selectStation);
 
   const selected = trains.find((t) => t.id === selectedId) ?? null;
   const stock = selected ? inferStock(selected) : null;
@@ -124,6 +129,50 @@ export function Hud() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {!selected && !selectedSignal && selectedStation === "EXD" && (
+        <div className="hud hud-bottom">
+          <div className="panel-head">
+            <span className="swatch big" style={{ background: "#f6ad55" }} />
+            <div>
+              <strong>Exeter St David's</strong>
+              <div className="muted">who's at which platform — tap a row to follow</div>
+            </div>
+            <button className="close" onClick={() => selectStation(null)}>
+              ✕
+            </button>
+          </div>
+          <ul className="platform-list">
+            {EXD_PLATFORMS.map((p) => {
+              const occ = trains.find(
+                (t) => t.station === "EXD" && t.platform && normPlatform(t.platform) === p,
+              );
+              const line = occ ? LINE_BY_ID.get(occ.lineId) : null;
+              return (
+                <li
+                  key={p}
+                  className={occ ? "occupied" : ""}
+                  onClick={() => occ && select(occ.id)}
+                >
+                  <span className="plat">P{p}</span>
+                  {occ ? (
+                    <>
+                      <span className="swatch" style={{ background: line?.color }} />
+                      <span className="headcode">{occ.headcode}</span>
+                      <span className="dest">
+                        {occ.operator ? `${operatorName(occ.operator)} → ` : "→ "}
+                        {occ.headingTo}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 

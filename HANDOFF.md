@@ -69,6 +69,7 @@ npm run schedule       # builds data/headcodeSchedule.generated.json (headcode�
 | **Signals (numbers + positions)** | `src/data/realSignals.ts` |
 | Signal rendering + red/green logic | `src/scene/Signals.tsx` |
 | Berth → position + direction | `src/data/berthMileages.ts`, `src/data/berths.ts`, `src/data/berthMileages.generated.json` |
+| Station platform lanes (frame shared by drawing + train parking) | `src/data/stationLayouts.ts`, `src/scene/StationDetail.tsx` |
 | TD WebSocket client | `src/services/networkRailTd.ts` |
 | Operator name + stock inference | `src/data/rollingStock.ts` |
 | Camera / controls / themes | `src/scene/World.tsx` |
@@ -219,6 +220,31 @@ signals and must not show a main aspect. If new lists include them, flag and dro
 - Direction: prefer the berth's own SMART direction; else infer from movement
   (`src/services/networkRailTd.ts`).
 
+### Platform parking — Exeter St David's (BUILT)
+
+Berth tables now carry **`crs` + `platform`**: hand rows in `berthMileages.ts`
+cover all EXD platform berths in both directions (a platform's TD berth is
+named for its starting signal — down E160/E260/E060/E360/E460 = P1/3/4/5/6, up
+E137/E037/E237/E337/E437/E537 = P6/5/4/3/1/2), and `buildAllBerths.js` now also
+emits SMART's PLATFORM column for every generated berth (**needs a re-run**).
+
+`src/data/stationLayouts.ts` defines EXD's local frame + per-platform track-lane
+X offsets, shared by `StationDetail.tsx` (drawing; numbers sit beside their
+faces) and `Train.tsx` (a third placement mode: when a train's berth has
+crs+platform and the station is modelled, it glides onto that lane instead of
+stacking on the station dot). Clicking the station (amber disc at the hub, any
+zoom — or the platform model itself) selects it: the camera does a one-shot
+bird's-eye glide overhead (then orbit/zoom are free again) and the HUD shows a
+P1–P6 occupancy list (tap a row to select that train). `selectedStation` in the
+store is mutually exclusive with train/signal selection.
+
+Replay mode demos it with zero creds: each line's `*01` demo berth is EXD with
+a platform (main 4, taunton 5, exmouth 1, paignton 6).
+
+**DISCOVERY:** the committed `src/data/berthMileages.generated.json` is an
+EMPTY placeholder — the user's 108-berth run only ever existed on their Mac.
+Next `npm run berths:all` (now with platforms) should be **committed + pushed**.
+
 ---
 
 ## 8. Operator + destination — NR-NATIVE (RTT was abandoned)
@@ -327,6 +353,9 @@ constantly). Coverage good for GWR, patchier elsewhere.
 - **Selecting a train** eases once into an oblique 3/4 framing, then **follows**
   the train by translating the camera with its motion — **orbit & zoom stay under
   user control** (no forced top-down snap-back). `CameraRig` in `World.tsx`.
+- **Selecting a station** (EXD only so far) glides once to a bird's-eye view
+  ~36 units up, slightly north of nadir so the platform numbers read upright,
+  then releases control. Station detail force-renders while selected.
 - **Controls** (OrbitControls, Mac-trackpad friendly): **left-drag / one finger =
   PAN**, **right-drag / two-finger = ROTATE**, wheel/pinch = zoom. (Possible
   follow-up: bind rotate to hold-key+drag if right-drag feels fiddly.)
@@ -359,9 +388,12 @@ constantly). Coverage good for GWR, patchier elsewhere.
 4. **Second TD area (Plymouth panel)** — to light up Plymouth/Ivybridge and
    extend coverage (§7).
 5. **St David's up-starter placement** at the junction throat — revisit if odd.
-6. **Per-platform train spread** — SMART gives each berth a platform but we peg
-   all of a station's berths to one mileage; needs lateral platform offsets in
-   the renderer (low priority — direction already splits the rails).
+6. **Per-platform train spread — DONE for Exeter St David's** (§7): trains park
+   on their platform lane, click-the-station bird's-eye + P1–P6 HUD panel.
+   Remaining: (a) user re-runs `npm run berths:all` and **commits the
+   regenerated `src/data/berthMileages.generated.json`** (adds SMART platforms
+   everywhere + restores the 108-berth coverage that was never pushed);
+   (b) lanes for other stations (NTA next) once their platform data is in.
 7. **Delete dead RTT code** (§8).
 8. **Land/Map mode UI polish** — the user intends to redesign UI/UX; Dev Mode is
    preserved as the stable view to fall back to.

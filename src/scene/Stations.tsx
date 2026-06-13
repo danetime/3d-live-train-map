@@ -100,6 +100,7 @@ function SignalStation({ isHub }: { isHub: boolean }) {
 export function Stations() {
   const land = useTrainStore((s) => s.theme) === "land";
   const detailLevel = useTrainStore((s) => s.detailLevel);
+  const selectStation = useTrainStore((s) => s.selectStation);
   const labelColor = land ? "#1a202c" : "#e8eef7";
   const labelOutline = land ? "#ffffff" : "#0b1220";
 
@@ -115,14 +116,33 @@ export function Stations() {
         const height = isHub ? 3.2 : 1.7;
         return (
           <group key={station.code} position={[p.x, 0, p.z]}>
-            {/* The hub's building is replaced by the detailed platform
-                layout (StationDetail). */}
-            {!isHub &&
-              (land ? (
-                <LandStation size={size} height={height} isHub={isHub} />
-              ) : (
-                <SignalStation isHub={isHub} />
-              ))}
+            {/* The hub's building is replaced by the detailed platform layout
+                (StationDetail); this amber disc is its always-available click
+                target — tap it from any zoom for the bird's-eye platform view. */}
+            {isHub ? (
+              <mesh
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[0, 0.02, 0]}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectStation(station.code);
+                }}
+                onPointerOver={(e) => {
+                  e.stopPropagation();
+                  document.body.style.cursor = "pointer";
+                }}
+                onPointerOut={() => {
+                  document.body.style.cursor = "auto";
+                }}
+              >
+                <circleGeometry args={[2.4, 28]} />
+                <meshBasicMaterial color="#f6ad55" transparent opacity={0.55} />
+              </mesh>
+            ) : land ? (
+              <LandStation size={size} height={height} isHub={isHub} />
+            ) : (
+              <SignalStation isHub={isHub} />
+            )}
             <ScaledLabel
               text={isHub ? "Exeter St David's" : station.name}
               y={(land ? height : 2.4) + (isHub ? 2.4 : 1.6)}

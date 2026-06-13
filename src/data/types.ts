@@ -71,6 +71,9 @@ export type Train = {
   formation?: TrainFormation;
   /** Platform the train is standing at, from SMART berth data (live only). */
   platform?: string;
+  /** CRS of the station that platform belongs to (e.g. "EXD") — together with
+   *  `platform` this parks the train on the station's modelled platform lane. */
+  station?: string;
   /**
    * Exact geographic position, when we have real berth coordinates. If set, the
    * train is rendered here (and faces its direction of travel) instead of being
