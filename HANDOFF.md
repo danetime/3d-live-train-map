@@ -430,9 +430,15 @@ and berth positions become edge-relative.
    spline-end behaviour). Verified **0.0** vertex delta vs the old per-line tubes
    — byte-identical. `GAUGE` still exported from `RailNetwork.tsx`. Each line is
    one run today; later steps split runs without touching the renderer.
-3. **NEXT** — move trains onto `(edge, distance)` — berth mileages already map via
-   `lineTToEdge`; platform parking (§7) carries over.
-4. Move signals onto edge-blocks.
+3. **DONE** — `Train.tsx` spline mode resolves position + tangent via the graph
+   edge (`lineTToEdge` → `edgePointAt`/`edgeTangentAt`) instead of the line
+   curve. Verified identical: worst position Δ 2.5e-13, heading Δ 3.5e-13 over
+   500 samples × both directions × all lines. Lateral rail offset still
+   line/t-based (revisited once edges carry independent geometry). Point mode +
+   platform parking untouched.
+4. **NEXT** — move signals onto edge-blocks (a block = an edge range in a
+   direction; `lineTToEdge` already converts train positions, so trains needn't
+   store an edge).
 5. Add REAL topology where it matters, **St David's/Central first**: split the
    Exmouth line into double-track edges + Exmouth Jn node + branch, double track
    to Pinhoe (per user's local knowledge). This is where the junction goes tidy,

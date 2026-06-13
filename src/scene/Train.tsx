@@ -5,7 +5,8 @@ import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
 import type { Train as TrainModel } from "../data/types";
 import { LINE_BY_ID } from "../data/network";
-import { lineCurve, branchOffset, lineStopParams } from "../data/lineCurves";
+import { branchOffset, lineStopParams } from "../data/lineCurves";
+import { lineTToEdge, edgePointAt, edgeTangentAt } from "../data/trackGraph";
 import { project } from "../data/geo";
 import { platformStandWorld } from "../data/stationLayouts";
 import { GAUGE } from "./RailNetwork";
@@ -199,7 +200,6 @@ export function Train({ train }: { train: TrainModel }) {
   const advance = useTrainStore((s) => s.advance);
   const select = useTrainStore((s) => s.select);
 
-  const curve = useMemo(() => lineCurve(train.lineId), [train.lineId]);
   const line = LINE_BY_ID.get(train.lineId)!;
   const selected = selectedId === train.id;
 
@@ -272,8 +272,14 @@ export function Train({ train }: { train: TrainModel }) {
       }
 
       const t = THREE.MathUtils.clamp(tRef.current, 0.0001, 0.9999);
-      curve.getPointAt(t, pos);
-      curve.getTangentAt(t, tangent); // raw tangent
+      // Resolve position + tangent via the track graph's edge for this (line, t)
+      // — trains ride the graph, not the monolithic line spline, so when edges
+      // gain their own geometry (junction rework) trains follow without changes
+      // here. Identical today: edges are t-ranges on the same curve. The lateral
+      // rail offset stays line/t-based for now (revisited with edge geometry).
+      const { edge, s } = lineTToEdge(line.id, t)!;
+      edgePointAt(edge, s, pos);
+      edgeTangentAt(edge, s, tangent); // raw tangent
       const dir = dirRef.current;
       // Double-track lines ride the rail for the current direction. A branch
       // that shares the double-track trunk (the Riviera line, Exeter→Newton

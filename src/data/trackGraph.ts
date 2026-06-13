@@ -147,6 +147,12 @@ export function edgePointAt(edge: TrackEdge, s: number, target = new THREE.Vecto
   return lineCurve(edge.lineId).getPointAt(THREE.MathUtils.clamp(t, 0, 1), target);
 }
 
+/** Unit tangent (direction of increasing s) at fraction `s` along an edge. */
+export function edgeTangentAt(edge: TrackEdge, s: number, target = new THREE.Vector3()): THREE.Vector3 {
+  const t = edge.tFrom + (edge.tTo - edge.tFrom) * THREE.MathUtils.clamp(s, 0, 1);
+  return lineCurve(edge.lineId).getTangentAt(THREE.MathUtils.clamp(t, 0, 1), target);
+}
+
 /** Sample an edge into a polyline (used by the step-2 rail renderer). */
 export function sampleEdge(edge: TrackEdge, segments = 24): THREE.Vector3[] {
   const curve = lineCurve(edge.lineId);
