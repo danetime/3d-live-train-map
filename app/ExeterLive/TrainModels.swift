@@ -8,6 +8,15 @@ struct Formation: Codable, Hashable {
     var src: String?
 }
 
+/// Render-ready position the server resolves from the berth (see server/lib/positions.js).
+struct Pos: Codable, Hashable {
+    var line: String        // e.g. "newton-abbot"
+    var station: String     // CRS, e.g. "EXD" — where the train currently is
+    var miles: Double?
+    var dir: Int?           // 1 = down (away from Exeter), -1 = up
+    var platform: String?
+}
+
 /// One train, exactly as the /server WebSocket sends it.
 /// `{ headcode, area, berth, updatedAt?, toc?, dest?, formation? }`
 struct Train: Codable, Identifiable, Hashable {
@@ -18,6 +27,7 @@ struct Train: Codable, Identifiable, Hashable {
     var toc: String?
     var dest: String?
     var formation: Formation?
+    var pos: Pos?
 
     /// Stable identity for SwiftUI (area + headcode, matching the web client).
     var id: String { "\(area):\(headcode)" }
