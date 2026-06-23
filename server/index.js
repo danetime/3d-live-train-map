@@ -5,15 +5,17 @@
  *   node --env-file=.env index.js      → LIVE mode (needs NR_USERNAME/PASSWORD)
  *   CAPTURE=1 node --env-file=.env ...  → LIVE + log observed berths
  *
- * Browsers connect over WebSocket on WS_PORT and receive { type: "trains",
- * trains: [{ headcode, area, berth, updatedAt }] } snapshots once a second,
- * enriched with { toc, dest } from the CIF schedule and (when the DARWIN_*
- * env is set) { formation } — real coach count + loading from Darwin.
+ * Browsers / apps connect over WebSocket on WS_PORT and receive { type:
+ * "trains", trains: [{ headcode, area, berth, updatedAt }] } snapshots once a
+ * second, enriched with { toc, dest } from the CIF schedule, { formation }
+ * (when DARWIN_* is set) and { pos: { line, station, miles, dir?, platform? } }
+ * — a render-ready position resolved from the berth, so clients just draw.
  */
 import { BerthState } from "./lib/berthState.js";
 import { startWsServer } from "./lib/wsServer.js";
 import { startReplay } from "./lib/replay.js";
 import { loadSchedule } from "./lib/schedule.js";
+import { berthPosition } from "./lib/positions.js";
 
 const PORT = Number(process.env.WS_PORT) || 4001;
 // TD_ALL_SIG_AREA is the only reliable topic — the per-region topics (e.g.
@@ -68,9 +70,11 @@ const enrich = (trains) =>
   trains.map((t) => {
     const info = schedule.lookup(t.headcode);
     const formation = darwin?.lookup(t.headcode);
+    const pos = berthPosition(t.area, t.berth);
     let out = t;
     if (info) out = { ...out, toc: info.toc, dest: info.dest };
     if (formation) out = { ...out, formation };
+    if (pos) out = { ...out, pos };
     return out;
   });
 
