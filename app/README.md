@@ -6,13 +6,20 @@ renders the tube-map view. The backend stays the engine; this app is just a view
 
 > **Status: v1 slice.** Draws the static schematic (lines, double track,
 > stations, Exmouth Junction + Waterloo stub, Plymouth-left) and places live
-> trains at their current station, with pan/pinch. Signals, train-tap info, and
-> smooth gliding between stations come next.
+> trains at their current station (co-located trains fan out), with pan/pinch.
+> **Not yet:** signals, tapping a train for its info/formation, smooth gliding
+> between stations, up/down rail sides (waiting on the direction research), the
+> Topsham loop bulge.
 
 ## What you need
-- **Xcode 16+** and the Node backend running on your Mac (`cd server && npm run live`).
+- **Xcode 16+** (keep the default deployment target, iOS 17 or newer — the app
+  uses APIs up to iOS 17) and the Node backend running on your Mac
+  (`cd server && npm run live`).
 - The server now sends each train a `pos` (line, station, direction, platform),
   so the app just draws — no extra data to ship.
+- **Run the backend LIVE, not replay.** Positions come from real Exeter-panel
+  berths; the credential-free demo (`npm start`) shows trains in the count but
+  places **0** on the diagram.
 
 ## Create the Xcode project (one-time, ~2 min)
 The Swift sources live in `app/ExeterLive/`. Easiest reliable way to wrap them in

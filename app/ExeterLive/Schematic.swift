@@ -71,10 +71,10 @@ enum Schematic {
         doubleLines.contains(lineId) || doubleEdges.contains("\(lineId):\(a)-\(b)")
     }
 
-    static var bounds: (minX: Double, maxX: Double, minY: Double, maxY: Double) {
+    static let bounds: (minX: Double, maxX: Double, minY: Double, maxY: Double) = {
         let xs = pos.values.map(\.x), ys = pos.values.map(\.y)
         return (xs.min() ?? 0, xs.max() ?? 1, ys.min() ?? 0, ys.max() ?? 1)
-    }
+    }()
 }
 
 extension Color {

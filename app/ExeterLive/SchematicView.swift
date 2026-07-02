@@ -40,11 +40,13 @@ struct SchematicView: View {
         let scale = baseScale * zoom
         let gcx = b.minX + gw / 2, gcy = b.minY + gh / 2
 
+        // (Two distinct names on purpose — overloading LOCAL functions is a
+        // long-standing Swift compiler sore spot; don't merge these.)
         func P(_ x: Double, _ y: Double) -> CGPoint {
             CGPoint(x: size.width / 2 + CGFloat(x - gcx) * scale + offset.width,
                     y: size.height / 2 + CGFloat(y - gcy) * scale + offset.height)
         }
-        func P(_ code: String) -> CGPoint? { Schematic.pos[code].map { P($0.x, $0.y) } }
+        func stationPoint(_ code: String) -> CGPoint? { Schematic.pos[code].map { P($0.x, $0.y) } }
 
         let lineW = max(2.0, scale * 0.06)
         let railGap = max(2.0, scale * 0.085)
@@ -67,7 +69,7 @@ struct SchematicView: View {
         for ln in Schematic.lines {
             let stops = Array(ln.stops[ln.drawFrom...])
             for i in 0..<(stops.count - 1) {
-                guard let a = P(stops[i]), let c = P(stops[i + 1]) else { continue }
+                guard let a = stationPoint(stops[i]), let c = stationPoint(stops[i + 1]) else { continue }
                 if Schematic.isDouble(ln.id, stops[i], stops[i + 1]) {
                     let n = perp(a, c, railGap)
                     line(ctx, a.shift(n), c.shift(n), ln.color, lineW * 0.72)
@@ -113,17 +115,27 @@ struct SchematicView: View {
             }
         }
 
-        // Trains — at their current station, coloured by line
+        // Trains — at their current station, coloured by line. Trains sharing a
+        // station fan out horizontally instead of stacking on one dot (several
+        // at Exeter St David's at once is the normal case, not the exception).
+        var byStation: [String: [Train]] = [:]
         for t in trains {
-            guard let st = t.pos?.station, let p = P(st) else { continue }
-            let r: CGFloat = max(3.5, scale * 0.07)
-            let dot = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r))
-            ctx.fill(dot, with: .color(Schematic.color(t.pos?.line ?? "")))
-            ctx.stroke(dot, with: .color(Color(hex: "0b1220")), lineWidth: 1.5)
-            if showLabels {
-                ctx.draw(Text(t.headcode).font(.system(size: max(8, scale * 0.13), weight: .bold))
-                    .foregroundStyle(.white),
-                         at: CGPoint(x: p.x, y: p.y - r - 3), anchor: .bottom)
+            if let st = t.pos?.station { byStation[st, default: []].append(t) }
+        }
+        let r: CGFloat = max(3.5, scale * 0.07)
+        for (st, group) in byStation {
+            guard let base = stationPoint(st) else { continue }
+            for (i, t) in group.enumerated() {
+                let fan = (CGFloat(i) - CGFloat(group.count - 1) / 2) * (r * 2.4)
+                let p = CGPoint(x: base.x + fan, y: base.y)
+                let dot = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r))
+                ctx.fill(dot, with: .color(Schematic.color(t.pos?.line ?? "")))
+                ctx.stroke(dot, with: .color(Color(hex: "0b1220")), lineWidth: 1.5)
+                if showLabels {
+                    ctx.draw(Text(t.headcode).font(.system(size: max(8, scale * 0.13), weight: .bold))
+                        .foregroundStyle(.white),
+                             at: CGPoint(x: p.x, y: p.y - r - 3), anchor: .bottom)
+                }
             }
         }
     }

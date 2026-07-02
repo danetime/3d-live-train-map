@@ -40,7 +40,8 @@ final class TrainFeed: ObservableObject {
         let t = URLSession.shared.webSocketTask(with: url)
         task = t
         t.resume()
-        setConnected(true)
+        // `connected` flips true on the first decoded message, not here — the
+        // status pill should report data flowing, not merely an attempt.
         listen()
     }
 
@@ -66,7 +67,10 @@ final class TrainFeed: ObservableObject {
         guard let data = text.data(using: .utf8),
               let msg = try? JSONDecoder().decode(TrainsMessage.self, from: data),
               msg.type == "trains" else { return }
-        DispatchQueue.main.async { self.trains = msg.trains }
+        DispatchQueue.main.async {
+            self.connected = true
+            self.trains = msg.trains
+        }
     }
 
     private func scheduleReconnect() {

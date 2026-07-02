@@ -9,9 +9,11 @@ struct Formation: Codable, Hashable {
 }
 
 /// Render-ready position the server resolves from the berth (see server/lib/positions.js).
+/// Every field the server might omit is optional — a single unexpected train must
+/// never fail decoding of the whole frame.
 struct Pos: Codable, Hashable {
     var line: String        // e.g. "newton-abbot"
-    var station: String     // CRS, e.g. "EXD" — where the train currently is
+    var station: String?    // CRS, e.g. "EXD" — where the train currently is
     var miles: Double?
     var dir: Int?           // 1 = down (away from Exeter), -1 = up
     var platform: String?
