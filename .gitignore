@@ -12,6 +12,15 @@ dist-ssr
 # Server: downloaded Network Rail reference caches + generated dry-run output
 # (the committed corridor server/data/locations.csv and samples are kept)
 server/data/*.json
+server/data/*.json.gz
 server/data/sample/output.berthCoordinates.json
 # Darwin raw message samples (written when DARWIN_DEBUG=1)
 server/data/darwinSamples/
+
+# Xcode (app/ExeterLive/): machine-specific junk, never shared
+**/xcuserdata/
+**/*.xcuserstate
+**/*.xcscmblueprint
+**/*.xccheckout
+**/DerivedData/
+**/.DS_Store
