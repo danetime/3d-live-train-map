@@ -1,4 +1,5 @@
 import Foundation
+import Combine // ObservableObject / @Published live here, not Foundation
 
 /// Where the app finds the /server WebSocket bridge.
 /// - iOS Simulator: `ws://127.0.0.1:4001` works (it shares the Mac's network).
