@@ -498,3 +498,32 @@ v1 polish candidates: 45°/angled branches instead of vertical, direction arrows
 on trains, station labels collision-tuning, signals, a header/legend styled to
 match. Everything else (server, data, track graph) is shared with the core
 branch — merge the view back if it's a keeper, or bin the branch if not.
+
+---
+
+## 15. Native iOS app (branch `swift-app`) — the current focus
+
+**Plan A architecture:** the Node backend stays the engine and now attaches a
+render-ready `pos: { line, station, miles, dir?, platform? }` to every train in
+the WS stream (`server/lib/positions.js`, from `berthMileages.generated.json`),
+so clients just draw. The SwiftUI app lives in `app/ExeterLive/` (Xcode 16
+project, synced-folder — files in the folder are auto-compiled). Working loop:
+Swift is written blind here (Linux, no Xcode); the USER builds in Xcode and
+pastes errors/screenshots. First build issues fixed: missing `import Combine`.
+`Config.feedURL` in `TrainFeed.swift` = the Mac's LAN IP on a physical device
+(the user keeps that edit LOCAL/uncommitted); `127.0.0.1` for the Simulator.
+ATS local-networking + local-network usage description are set via
+`app/ExeterLive/ExeterLive/Info.plist` (user added in Xcode, verified).
+
+**Status:** runs on the user's physical iPhone against `npm run live` — ~9
+trains placed. Replay mode places 0 (demo berths have no positions).
+
+**Design decisions (user-confirmed, 2026-07):** classic LIGHT tube-map look
+(warm white, ink station marks — `MapPalette` in `Schematic.swift`); station
+crossbar ticks + ringed interchange circles (EXD/NTA); twin rails wherever
+track is double; Topsham passing loop drawn as a bulge; **UK left-hand
+running** for train placement (offset LEFT of travel: up trains on the top rail
+of the Plymouth-left spine, down on the bottom; up trains at Topsham take the
+loop; unknown-direction trains ride the centreline). "Design first,
+architecture later" — signals, train tap-for-info, gliding between stations,
+per-platform placement all still to come in the app.

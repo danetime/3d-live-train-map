@@ -63,6 +63,10 @@ enum Schematic {
 
     static let hubs: Set<String> = ["EXD", "NTA"]
 
+    /// Passing loops: a short second track beside one station on a single line
+    /// (up/down trains cross there). Drawn as a bulge; up trains stand on it.
+    static let loops: [(lineId: String, at: String)] = [("exmouth", "TOP")]
+
     static func color(_ lineId: String) -> Color {
         lines.first { $0.id == lineId }?.color ?? .gray
     }
@@ -71,10 +75,51 @@ enum Schematic {
         doubleLines.contains(lineId) || doubleEdges.contains("\(lineId):\(a)-\(b)")
     }
 
+    /// Is the track double AT a station (either adjacent segment double)?
+    static func isDoubleAt(line lineId: String, station code: String) -> Bool {
+        if doubleLines.contains(lineId) { return true }
+        guard let def = lines.first(where: { $0.id == lineId }),
+              let i = def.stops.firstIndex(of: code) else { return false }
+        let before = i > 0 && isDouble(lineId, def.stops[i - 1], def.stops[i])
+        let after = i < def.stops.count - 1 && isDouble(lineId, def.stops[i], def.stops[i + 1])
+        return before || after
+    }
+
+    /// Unit vector (grid space) of dir = +1 travel — stops order, Exeter
+    /// outwards — at a station on a line. Nil if the station isn't on the line.
+    static func travelTangent(line lineId: String, at code: String) -> (dx: Double, dy: Double)? {
+        guard let def = lines.first(where: { $0.id == lineId }),
+              let i = def.stops.firstIndex(of: code) else { return nil }
+        let aCode = def.stops[max(i - 1, 0)]
+        let bCode = def.stops[min(i + 1, def.stops.count - 1)]
+        guard aCode != bCode, let a = pos[aCode], let b = pos[bCode] else { return nil }
+        let dx = b.x - a.x, dy = b.y - a.y
+        let len = (dx * dx + dy * dy).squareRoot()
+        guard len > 0 else { return nil }
+        return (dx / len, dy / len)
+    }
+
+    /// Local track direction at a station, from whichever line serves it —
+    /// used to angle the station crossbar tick.
+    static func anyTangent(at code: String) -> (dx: Double, dy: Double) {
+        for ln in lines {
+            if let t = travelTangent(line: ln.id, at: code) { return t }
+        }
+        return (1, 0)
+    }
+
     static let bounds: (minX: Double, maxX: Double, minY: Double, maxY: Double) = {
         let xs = pos.values.map(\.x), ys = pos.values.map(\.y)
         return (xs.min() ?? 0, xs.max() ?? 1, ys.min() ?? 0, ys.max() ?? 1)
     }()
+}
+
+/// Classic light tube-map palette (black-on-white, printed-map style).
+enum MapPalette {
+    static let background = Color(hex: "FBFAF6") // warm paper white
+    static let ink = Color(hex: "1C1C1E")        // station marks + labels
+    static let muted = Color(hex: "6E6E73")      // secondary labels
+    static let stub = Color(hex: "9A9FA8")       // off-map continuation lines
 }
 
 extension Color {
