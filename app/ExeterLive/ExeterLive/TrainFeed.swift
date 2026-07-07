@@ -6,7 +6,7 @@ import Combine // ObservableObject / @Published live here, not Foundation
 /// - Physical iPhone/iPad: change to your Mac's LAN IP, e.g. `ws://192.168.1.23:4001`,
 ///   and make sure both are on the same Wi-Fi.
 enum Config {
-    static let feedURL = "ws://127.0.0.1:4001"
+    static let feedURL = "ws://192.168.1.240:4001"
 }
 
 /// Connects to the server's WebSocket and publishes the live trains.
